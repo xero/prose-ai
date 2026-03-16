@@ -1,0 +1,151 @@
+// ╔═══════════════════════════════╗
+// ║   prose-ai — tooltip          ║
+// ╚═══════════════════════════════╝
+
+const el = {
+	wrap: document.querySelector('#tooltip'),
+	badge: document.querySelector('#tooltip-badge'),
+	explanation: document.querySelector('#tooltip-explanation'),
+	original: document.querySelector('#tooltip-original'),
+	replacement: document.querySelector('#tooltip-replacement'),
+	accept: document.querySelector('#tooltip-accept'),
+	reject: document.querySelector('#tooltip-reject'),
+};
+
+let activeId = null;
+
+// position the tooltip near a target DOM rect, keeping it on screen
+const reposition = (targetRect) => {
+	const pad  = 8;
+	const tw   = el.wrap.offsetWidth  || 260;
+	const th   = el.wrap.offsetHeight || 120;
+	const vw   = window.innerWidth;
+	const vh   = window.innerHeight;
+
+	let top  = targetRect.bottom + pad;
+	let left = targetRect.left;
+
+	if (left + tw > vw - pad) left = vw - tw - pad;
+	if (top  + th > vh - pad) top  = targetRect.top - th - pad;
+
+	el.wrap.style.top  = `${top}px`;
+	el.wrap.style.left = `${left}px`;
+};
+
+const show = (id, type, explanation, original, replacement, targetRect) => {
+	activeId = id;
+
+	el.badge.textContent  = type;
+	el.badge.className    = `sg-badge sg-badge--${type}`;
+	el.explanation.textContent = explanation;
+	el.original.textContent    = original;
+	el.replacement.textContent = replacement;
+
+	el.wrap.classList.add('visible');
+
+	// reposition after paint so offsetWidth is accurate
+	requestAnimationFrame(() => reposition(targetRect));
+
+	// highlight the corresponding mark span
+	document.querySelectorAll('.suggestion').forEach(s => s.classList.remove('active'));
+	document.querySelectorAll(`[data-suggestion-id="${id}"]`)
+		.forEach(s => s.classList.add('active'));
+
+	// highlight sidebar card
+	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
+	document.querySelector(`.sg-card[data-id="${id}"]`)?.classList.add('active');
+};
+
+export const hide = () => {
+	activeId = null;
+	el.wrap.classList.remove('visible');
+	document.querySelectorAll('.suggestion').forEach(s => s.classList.remove('active'));
+	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
+};
+
+// showForId — called from sidebar card click
+export const showForId = (id, editor) => {
+	const mark = findMarkById(editor, id);
+	if (!mark) return;
+
+	// find the DOM span and get its bounding rect
+	const span = document.querySelector(`[data-suggestion-id="${id}"]`);
+	const rect  = span
+		? span.getBoundingClientRect()
+		: { top: 200, bottom: 220, left: 200 };
+
+	show(id, mark.type, mark.explanation, mark.original, mark.replacement, rect);
+
+	// scroll editor to mark
+	span?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+};
+
+const findMarkById = (editor, id) => {
+	let found = null;
+	editor.state.doc.descendants((node) => {
+		if (found) return false;
+		if (!node.isText) return;
+		const m = node.marks.find(
+			m => m.type.name === 'suggestion' && m.attrs.id === id
+		);
+		if (m) found = {
+			type: m.attrs.type,
+			replacement: m.attrs.replacement,
+			explanation: m.attrs.explanation,
+			original: node.text,
+		};
+	});
+	return found;
+};
+
+export const initTooltip = (editor) => {
+	// click on a suggestion mark in the editor
+	document.querySelector('#editor').addEventListener('click', (e) => {
+		const span = e.target.closest('.suggestion');
+		if (!span) {
+			hide(); return;
+		}
+
+		const id   = span.dataset.suggestionId;
+		const mark = findMarkById(editor, id);
+		if (!mark) return;
+
+		show(id, mark.type, mark.explanation, mark.original, mark.replacement,
+			span.getBoundingClientRect());
+	});
+
+	// accept
+	el.accept.addEventListener('click', () => {
+		if (!activeId) return;
+		editor.commands.acceptSuggestion(activeId);
+		hide();
+	});
+
+	// reject
+	el.reject.addEventListener('click', () => {
+		if (!activeId) return;
+		editor.commands.rejectSuggestion(activeId);
+		hide();
+	});
+
+	// dismiss on outside click
+	document.addEventListener('click', (e) => {
+		if (!el.wrap.classList.contains('visible')) return;
+		if (el.wrap.contains(e.target)) return;
+		if (e.target.closest('.suggestion')) return;
+		if (e.target.closest('.sg-card')) return;
+		hide();
+	});
+
+	// dismiss on Escape
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') hide();
+	});
+
+	// hide when suggestions are cleared (e.g. re-analyze)
+	document.addEventListener('suggestions:changed', ({ detail }) => {
+		if (!activeId) return;
+		const still = detail.suggestions.some(s => s.id === activeId);
+		if (!still) hide();
+	});
+};
