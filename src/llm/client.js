@@ -1,54 +1,92 @@
 // ╔═══════════════════════════════╗
-// ║   prose-ai — ollama client    ║
+// ║   prose-ai — llm client       ║
 // ╚═══════════════════════════════╝
 
-import { buildPrompt, validateOutput } from './prompt.js';
+import { buildPrompt, validateOutput }               from './prompt.js';
+import { BACKEND_URL, BACKEND_KEY, MODEL,
+         CHUNK_CHAR_BUDGET, MAX_CONCURRENT, NUM_CTX } from './config.js';
+import { walkDocument }                          from './walker.js';
+import { packChunks }                            from './packer.js';
+import { RequestPool }                           from './pool.js';
 
-const ENDPOINT = 'http://localhost:11434/api/generate';
-const MODEL    = 'gemma3:4b';
+const pool = new RequestPool({ limit: MAX_CONCURRENT });
 
-let controller = null;  // active AbortController, null when idle
+// token increments on every analyze() call and on cancelAnalysis(),
+// so a stale run can detect it was superseded and throw AbortError.
+let token = 0;
 
-// analyze(text, mode, types) → [{original, replacement, type, explanation}]
-// throws on network error or if aborted (caller checks err.name === 'AbortError')
-export const analyze = async (text, mode, types) => {
-	// cancel any in-flight request before starting a new one
-	if (controller) controller.abort();
-	controller = new AbortController();
+// analyze(doc, mode, types) — async generator
+// yields { type: 'init', total } first, then
+//   { type: 'chunk', index, total, suggestions, error } per chunk.
+// throws AbortError if cancelled; throws Error on network failure.
+export async function* analyze(doc, mode, types) {
+	pool.abort();
+	const myToken = ++token;
 
-	const body = JSON.stringify({
-		model: MODEL,
-		prompt: buildPrompt(text, mode, types),
-		stream: false,
+	const blocks = walkDocument(doc, mode);
+	const chunks = packChunks(blocks, CHUNK_CHAR_BUDGET);
+
+	if (chunks.length === 0) return;
+
+	const total = chunks.length;
+	yield { type: 'init', total };
+
+	const jobs = chunks.map((chunk) => async (signal) => {
+		let res;
+		try {
+			res = await fetch(`${BACKEND_URL}/chat/completions`, {
+				method:  'POST',
+				headers: {
+					'Content-Type':  'application/json',
+					'Authorization': `Bearer ${BACKEND_KEY}`,
+				},
+				body:    JSON.stringify({
+					model:    MODEL,
+					messages: [{ role: 'user', content: buildPrompt(chunk.text, mode, types) }],
+					stream:   false,
+					options:  { num_ctx: NUM_CTX },
+				}),
+				signal,
+			});
+		} catch (err) {
+			if (err.name === 'AbortError') throw err;
+			throw new Error(
+				`LLM backend unreachable — is it running? (${err.message})`,
+				{ cause: err }
+			);
+		}
+
+		if (!res.ok) {
+			const detail = await res.text().catch(() => '');
+			throw new Error(
+				`LLM backend returned ${res.status}` +
+				(detail ? ': ' + detail : '')
+			);
+		}
+
+		const data = await res.json();
+		return validateOutput(data.choices?.[0]?.message?.content ?? '', chunk.text);
 	});
 
-	let res;
-	try {
-		res = await fetch(ENDPOINT, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body,
-			signal: controller.signal,
-		});
-	} catch (err) {
-		if (err.name === 'AbortError') throw err;
-		throw new Error(`Ollama unreachable — is it running? (${err.message})`, { cause: err });
+	for await (const result of pool.runProgressive(jobs)) {
+		if (token !== myToken) {
+			throw new DOMException('Aborted', 'AbortError');
+		}
+		if (result.status === 'aborted') {
+			throw new DOMException('Aborted', 'AbortError');
+		}
+		yield {
+			type:        'chunk',
+			index:       result.index,
+			total,
+			suggestions: result.status === 'fulfilled' ? result.value : [],
+			error:       result.status === 'rejected'  ? result.reason : null,
+		};
 	}
+}
 
-	if (!res.ok) {
-		const detail = await res.text().catch(() => '');
-		throw new Error(`Ollama returned ${res.status}${detail ? ': ' + detail : ''}`);
-	}
-
-	const data = await res.json();
-	controller = null;
-
-	return validateOutput(data.response ?? '', text);
-};
-
-// cancel the in-flight request (no-op if idle)
+// cancel the in-flight analysis (no-op if idle)
 export const cancelAnalysis = () => {
-	if (!controller) return;
-	controller.abort();
-	controller = null;
+	token++;
+	pool.abort();
 };

@@ -59,6 +59,7 @@ export const SuggestionMark = Mark.create({
 				if (dispatch) {
 					const replacement = state.schema.text(mark.attrs.replacement);
 					const tr = state.tr
+						.setMeta('prose-ai:internal', true)
 						.removeMark(from, to, markType)
 						.replaceWith(from, to, replacement);
 					dispatch(tr);
@@ -67,11 +68,13 @@ export const SuggestionMark = Mark.create({
 			},
 
 			// remove the mark without changing the text
-			rejectSuggestion: (id) => ({ state, tr, dispatch }) => {
+			rejectSuggestion: (id) => ({ state, dispatch }) => {
 				const range = findMarkRange(state.doc, markType, id);
 				if (!range) return false;
 				if (dispatch) {
-					tr.removeMark(range.from, range.to, markType);
+					const tr = state.tr
+						.setMeta('prose-ai:internal', true)
+						.removeMark(range.from, range.to, markType);
 					dispatch(tr);
 				}
 				return true;

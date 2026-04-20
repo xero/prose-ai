@@ -12,7 +12,7 @@ export const applyMappedSuggestions = (editor, mapped) => {
 
 	const { state, view } = editor;
 	const markType = state.schema.marks.suggestion;
-	let tr = state.tr;
+	let tr = state.tr.setMeta('prose-ai:internal', true);
 	for (const s of mapped) {
 		tr = tr.addMark(s.from, s.to, markType.create({
 			id: s.id,

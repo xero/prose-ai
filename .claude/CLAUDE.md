@@ -3,10 +3,6 @@
 Once the server is run, (bun run dev).
 it is available at http://localhost:5173
 
-Use the webapp-testing skill at
-/mnt/skills/user/webapp-testing/SKILL.md
-or
-/Users/andrew.harrison/.claudework/skills/webapp-testing/SKILL.md
 
 For debugging, follow this sequence every time:
 1. Take a screenshot to see current state
@@ -23,3 +19,8 @@ For prose-ai specifically, the relevant console output is:
 - [prose-ai] info messages from mapper (fuzzy matches)
 - [prose-ai] error messages from the toolbar catch block
 - Any uncaught JS errors (type: error in console capture)
+
+the current plan (for all task phases is in `PLAN.md` in the project root)
+
+for html and css work please read
+~/.config/claude-skills/web-style/SKILL.md

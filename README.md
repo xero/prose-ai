@@ -17,6 +17,7 @@ Highlight any word or phrase to get contextual **synonyms** via a bubble menu.
 
 - **[Ollama](https://ollama.com)** — runs the language model locally
 - **[gemma3:4b](https://ollama.com/library/gemma3)** — Google's 4B model, fast on Apple Silicon and modern CPUs
+  Model and chunking configuration lives in [`src/llm/config.js`](./src/llm/config.js).
 - **[Bun](https://bun.sh)** — JS runtime and package manager
 - **[Vite](https://vite.dev)** — dev server and bundler
 - **[Tiptap](https://tiptap.dev)** — rich text editor (MIT, open source)

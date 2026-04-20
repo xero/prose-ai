@@ -8,6 +8,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { BubbleMenu as BubbleMenuExtension } from '@tiptap/extension-bubble-menu';
 import { SuggestionMark } from './extensions/suggestion.js';
+import { ACTIONS } from './ui/bubble-menu/actions.js';
 
 const STORAGE_KEY = 'prose-ai:content';
 const saved = localStorage.getItem(STORAGE_KEY);
@@ -26,7 +27,9 @@ export const editor = new Editor({
 				const { from, to } = state.selection;
 				if (from === to) return false;
 				if (editor.isActive('suggestion')) return false;
-				return true;
+				const selection = state.doc.textBetween(from, to);
+				const info = { selection, from, to };
+				return ACTIONS.some(a => !a.shouldShow || a.shouldShow(info));
 			},
 		}),
 	],

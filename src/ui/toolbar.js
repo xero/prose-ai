@@ -38,6 +38,7 @@ const setStatus = (msg, kind = '') => {
 };
 
 export const initToolbar = (editor) => {
+	let analyzing = false;
 
 	// ── mode selector ────────────────────────────────────
 	document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -100,41 +101,71 @@ export const initToolbar = (editor) => {
 	el.btnAnalyze.addEventListener('click', async () => {
 		const mode  = getActiveMode();
 		const types = getActiveTypes();
+		const doc   = editor.state.doc;
 
-		const text = editor.getText();
-		if (!text.trim()) {
+		if (!editor.getText().trim()) {
 			setStatus('nothing to analyze', 'error');
 			setTimeout(() => setStatus(''), 2500);
 			return;
 		}
 
-		// clear previous suggestions before starting
 		clearSuggestions(editor);
-
 		setLoading(true);
 		setStatus('waiting for ollama…', 'loading');
+		analyzing = true;
+
+		let completed    = 0;
+		let total        = 0;
+		let failed       = 0;
+		const allSuggestions = [];
 
 		try {
-			const suggestions = await analyze(text, mode, types);
+			for await (const event of analyze(doc, mode, types)) {
+				if (event.type === 'init') {
+					total = event.total;
+					setStatus(`analyzing 0/${total}…`, 'loading');
+					continue;
+				}
+				if (event.type === 'chunk') {
+					completed++;
+					if (event.error) {
+						failed++;
+						console.warn('[prose-ai] chunk failed:', event.error);
+					} else {
+						allSuggestions.push(...event.suggestions);
+						const mapped = mapSuggestions(editor, event.suggestions);
+						applyMappedSuggestions(editor, mapped);
+					}
+					setStatus(`analyzing ${completed}/${total}…`, 'loading');
+				}
+			}
 
-			setStatus('mapping positions…', 'loading');
-			const mapped = mapSuggestions(editor, suggestions);
-
-			applyMappedSuggestions(editor, mapped);
-
-			const n = mapped.length;
-			setStatus(n ? `${n} suggestion${n === 1 ? '' : 's'} found` : 'no suggestions found');
-			setTimeout(() => setStatus(''), 3000);
+			const n = allSuggestions.length;
+			let msg = n
+				? `${n} suggestion${n === 1 ? '' : 's'} found`
+				: 'no suggestions found';
+			if (failed > 0) msg += ` (${failed} section${failed === 1 ? '' : 's'} failed)`;
+			setStatus(msg, failed > 0 ? 'warn' : '');
+			setTimeout(() => setStatus(''), 5000);
 
 		} catch (err) {
-			if (err.name === 'AbortError') return;  // cancel button handled it
-
+			if (err.name === 'AbortError') return;
 			console.error('[prose-ai]', err);
 			setStatus(err.message, 'error');
 			setTimeout(() => setStatus(''), 5000);
 		} finally {
 			setLoading(false);
+			analyzing = false;
 		}
+	});
+
+	// ── abort on user typing during analysis ─────────────
+	editor.on('update', ({ transaction }) => {
+		if (!analyzing) return;
+		if (!transaction.docChanged) return;
+		if (transaction.getMeta('prose-ai:internal')) return;
+		cancelAnalysis();
+		setStatus('');
 	});
 
 	// update count badge whenever suggestions change

@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "test": "bun test"
   },
   "dependencies": {
     "@tiptap/core": "^3.20.2",

@@ -12,6 +12,19 @@ const synonymsHandler = ({ selection, sentence }) => ({
 	fetch: () => getSynonyms(selection, sentence),
 });
 
+export const synonymsShouldShow = ({ selection }) => {
+	const trimmed = selection.trim();
+	if (!trimmed) return false;
+	const words = trimmed.split(/\s+/).filter(Boolean);
+	return words.length >= 1 && words.length <= 10;
+};
+
 export const ACTIONS = [
-	{ id: 'synonyms', label: 'Synonyms', icon: '⇄', handler: synonymsHandler },
+	{
+		id: 'synonyms',
+		label: 'Synonyms',
+		icon: '⇄',
+		handler: synonymsHandler,
+		shouldShow: synonymsShouldShow,
+	},
 ];
