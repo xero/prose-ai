@@ -12,11 +12,13 @@ export const BACKEND_URL = 'http://localhost:8000/v1';
 // most local backends ignore this; some require a non-empty string.
 export const BACKEND_KEY = 'prose-ai';
 
-// model ladder for this 32 GB base-M4 machine (decode is bandwidth-bound):
-//   qwen3.5-4b-4bit   — 2.4 GB, fastest, weaker judgment — worth a try later
-//   qwen3.5-9b-4bit   — 5.1 GB, the speed/quality sweet spot
+// model ladder for this 32 GB base-M4 machine (decode is bandwidth-bound).
+// bake-off (benchmarks/r-bake-*, medium doc): rewrite 72s / 119s / 214s
+// for 4b / 9b / gemma-4-12b-qat+suffix-decoding at equal suggestion yield.
+//   qwen3.5-4b-4bit   — 2.4 GB, the speed/yield winner
+//   qwen3.5-9b-4bit   — 5.1 GB, sharper judgment if 4b feels off
 //   qwen3.5-27b-4bit  — 15 GB, best quality but ~4 tok/s — too slow here
-export const MODEL = 'qwen3.5-9b-4bit';  // keep in sync with .model
+export const MODEL = 'qwen3.5-4b-4bit';  // keep in sync with .model
 
 // chunk packing
 export const CHUNK_CHAR_BUDGET = 1200;

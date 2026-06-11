@@ -1,0 +1,60 @@
+[
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "proofread",
+    "budget": 1200,
+    "concurrency": 6,
+    "runs": [
+      62430,
+      53322,
+      54792
+    ],
+    "avg": 54057,
+    "median": 54057,
+    "min": 53322,
+    "max": 54792,
+    "suggestion_counts": [
+      10,
+      13,
+      15
+    ],
+    "avg_suggestions": 14,
+    "chunk_count": 6,
+    "ttf_runs": [
+      3072,
+      3198,
+      3218
+    ],
+    "ttf_avg": 3208
+  },
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 1200,
+    "concurrency": 6,
+    "runs": [
+      123470,
+      117017,
+      120065
+    ],
+    "avg": 118541,
+    "median": 118541,
+    "min": 117017,
+    "max": 120065,
+    "suggestion_counts": [
+      36,
+      40,
+      40
+    ],
+    "avg_suggestions": 40,
+    "chunk_count": 6,
+    "ttf_runs": [
+      32732,
+      34929,
+      34872
+    ],
+    "ttf_avg": 34901
+  }
+]
