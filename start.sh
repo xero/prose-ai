@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
-# prose-ai start script — starts Ollama (or any OpenAI-compatible backend)
+# prose-ai start script — starts Rapid-MLX (or any OpenAI-compatible backend)
 # and launches the dev server. To use a different backend, update BACKEND_URL
 # in src/llm/config.js — no other changes needed.
 set -e
 
 MODEL=$(cat "$(dirname "$0")/.model")
+BASE="http://localhost:8000/v1"
 
-if ! pgrep -x ollama > /dev/null; then
-  echo "starting ollama..."
-  OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=3 \
-    ollama serve &> /tmp/ollama.log &
-  sleep 2  # give it a moment to bind
+if ! curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; then
+  echo "starting rapid-mlx..."
+  rapid-mlx serve "$MODEL" --port 8000 --gpu-memory-utilization 0.75 \
+    &> /tmp/rapid-mlx.log &
+  echo "waiting for server (first run downloads the model)..."
+  until curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; do sleep 1; done
 fi
 
-# warm the model
+# warm: one tiny completion loads weights and primes the prefix cache
 echo "loading model..."
-ollama run "$MODEL" "" &> /dev/null &
+curl -s "$BASE/chat/completions" -H 'Content-Type: application/json' \
+  -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":8}" \
+  > /dev/null &
 
 # load the ui
 echo "starting prose-ai..."

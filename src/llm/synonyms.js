@@ -2,7 +2,8 @@
 // ║   prose-ai — synonyms LLM    ║
 // ╚═══════════════════════════════╝
 
-import { BACKEND_URL, BACKEND_KEY, MODEL, NUM_CTX } from './config.js';
+import { BACKEND_URL, BACKEND_KEY, MODEL,
+         MAX_TOKENS, TEMPERATURE, EXTRA_BODY } from './config.js';
 
 let controller = null;
 
@@ -53,10 +54,12 @@ export const getSynonyms = async (selection, sentence) => {
 				'Authorization': `Bearer ${BACKEND_KEY}`,
 			},
 			body: JSON.stringify({
-				model:    MODEL,
-				messages: [{ role: 'user', content: prompt }],
-				stream:   false,
-				options:  { num_ctx: NUM_CTX },
+				model:       MODEL,
+				messages:    [{ role: 'user', content: prompt }],
+				stream:      false,
+				max_tokens:  MAX_TOKENS,
+				temperature: TEMPERATURE,
+				...EXTRA_BODY,
 			}),
 			signal: controller.signal,
 		});

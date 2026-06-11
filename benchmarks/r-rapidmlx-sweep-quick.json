@@ -1,0 +1,176 @@
+[
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 1200,
+    "concurrency": 3,
+    "runs": [
+      130212,
+      124383,
+      119566
+    ],
+    "avg": 121975,
+    "median": 121975,
+    "min": 119566,
+    "max": 124383,
+    "suggestion_counts": [
+      25,
+      35,
+      39
+    ],
+    "avg_suggestions": 37,
+    "chunk_count": 6,
+    "ttf_runs": [
+      66145,
+      63045,
+      61179
+    ],
+    "ttf_avg": 62112
+  },
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 1200,
+    "concurrency": 6,
+    "runs": [
+      107384,
+      115549,
+      111857
+    ],
+    "avg": 113703,
+    "median": 113703,
+    "min": 111857,
+    "max": 115549,
+    "suggestion_counts": [
+      37,
+      41,
+      36
+    ],
+    "avg_suggestions": 38.5,
+    "chunk_count": 6,
+    "ttf_runs": [
+      56976,
+      57090,
+      53578
+    ],
+    "ttf_avg": 55334
+  },
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 2400,
+    "concurrency": 3,
+    "runs": [
+      156468,
+      147037,
+      147601
+    ],
+    "avg": 147319,
+    "median": 147319,
+    "min": 147037,
+    "max": 147601,
+    "suggestion_counts": [
+      36,
+      37,
+      38
+    ],
+    "avg_suggestions": 37.5,
+    "chunk_count": 3,
+    "ttf_runs": [
+      48133,
+      30056,
+      31687
+    ],
+    "ttf_avg": 30872
+  },
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 2400,
+    "concurrency": 6,
+    "runs": [
+      143700,
+      145862,
+      148006
+    ],
+    "avg": 146934,
+    "median": 146934,
+    "min": 145862,
+    "max": 148006,
+    "suggestion_counts": [
+      37,
+      34,
+      38
+    ],
+    "avg_suggestions": 36,
+    "chunk_count": 3,
+    "ttf_runs": [
+      29603,
+      30639,
+      30640
+    ],
+    "ttf_avg": 30640
+  },
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 3600,
+    "concurrency": 3,
+    "runs": [
+      160279,
+      148691,
+      150980
+    ],
+    "avg": 149836,
+    "median": 149836,
+    "min": 148691,
+    "max": 150980,
+    "suggestion_counts": [
+      10,
+      11,
+      12
+    ],
+    "avg_suggestions": 11.5,
+    "chunk_count": 2,
+    "ttf_runs": [
+      92899,
+      101846,
+      108527
+    ],
+    "ttf_avg": 105187
+  },
+  {
+    "doc": "medium",
+    "model": "qwen3.5-9b-4bit",
+    "mode": "rewrite",
+    "budget": 3600,
+    "concurrency": 6,
+    "runs": [
+      159486,
+      176496,
+      177393
+    ],
+    "avg": 176945,
+    "median": 176945,
+    "min": 176496,
+    "max": 177393,
+    "suggestion_counts": [
+      12,
+      11,
+      12
+    ],
+    "avg_suggestions": 11.5,
+    "chunk_count": 2,
+    "ttf_runs": [
+      112117,
+      120035,
+      124008
+    ],
+    "ttf_avg": 122022
+  }
+]

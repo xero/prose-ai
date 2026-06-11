@@ -1,0 +1,193 @@
+COVCOM: covert communications for private group conversations. Share an invite, talk, close the tab, and it's gone. End-to-end encrypted with post-quantum cryptography, so the messages stay private today and unreadable to the computers coming tomorrow.
+
+COVCOM encrypts every message with XChaCha20-Poly1305. That is the foundation. The post-quantum KEM, the double ratchet, and the epoch machinery are all built around a single purpose — getting a fresh, unique XChaCha20 key to the right people at the right time.
+
+XChaCha20 is fast, audited, and carries a 192-bit nonce space that makes accidental nonce reuse practically impossible regardless of message volume. Poly1305 authenticates every ciphertext, so a garbled or tampered message fails authentication before any plaintext is produced. Each message key is used exactly once, then wiped.
+
+File attachments use the same cipher through SealStreamPool, a chunked streaming wrapper that splits payloads into 65 KB frames and processes them in parallel across worker threads. The file key comes from the same chain as regular message keys and travels in the broadcast metadata, never in plaintext.
+
+Each participant owns one send chain. It is stateful and forward-secret, implemented as a KDFChain from the leviathan-crypto ratchet module. Every call to step() runs HKDF-SHA-256 over the current chain key with a big-endian uint64 counter in the info bytes, producing a new chain key and a fresh 32-byte message key. The old chain key is wiped before the new one is stored. Calling step() on an already-disposed chain throws; the stateful design makes reuse structurally impossible.
+
+This is the symmetric-key ratchet from the Double Ratchet spec. Because message keys are not used to derive anything else, you can delete a key the moment you finish with it without affecting any other message's security. A device compromised after a conversation ends cannot reconstruct the XChaCha20 keys that protected it.
+
+Out-of-order delivery is handled by SkippedKeyStore, which advances the chain past gaps while caching keys for messages that may still arrive. A ceiling on cached keys prevents a malicious sender from forcing unbounded storage growth.
+
+A chain that never refreshes only solves half the problem. If someone compromises a chain key today, they can decrypt every future message in that chain until someone catches on. The ratchet limits that window by periodically generating a new chain seed from fresh cryptographic material.
+
+The Double Ratchet algorithm was originally published as the Axolotl Ratchet in 2013 — named for the Mexican salamander famous for regenerating lost limbs. The name fits: compromise a key, the next ratchet step heals it. The rename to Double Ratchet happened before the first public spec release, but the regeneration metaphor stuck.
+
+Classic Signal uses Diffie-Hellman for the ratchet step. Each party publishes a new ephemeral public key with every message, and the DH output mixes into the root key, refreshing the chain. Both parties can compute the shared output simultaneously, so classic DR ratchets on every exchange.
+
+COVCOM uses ML-KEM-768 instead. ML-KEM is a Key Encapsulation Mechanism: the encapsulator generates a fresh ciphertext and shared secret in one operation; the decapsulator recovers the same secret from the ciphertext. That shared secret feeds into root key derivation via HKDF-SHA-256, expanding to 96 bytes of output: a new root key, a new send chain key, and a new receive chain key, all derived in one pass.
+
+The reason for 96 bytes rather than the classic 64 is that one KEM epoch spawns both the send chain and the receive chain simultaneously. In classic DR, a DH step spawns one new chain at a time because it requires two DH exchanges in alternation. ML-KEM is non-interactive on the encapsulator's side, so both chains can emerge from a single operation.
+
+The asymmetry of ML-KEM changes how the ratchet behaves. In classic DH, both parties can advance independently from their own computation. With ML-KEM, the encapsulator goes first; the decapsulator cannot advance until the KEM ciphertext arrives in a message header. This is why the protocol is a Sparse Post-Quantum Ratchet: you cannot ratchet on every single message because the KEM ciphertext for ML-KEM-768 is 1088 bytes, and that overhead on every message would be impractical.
+
+Three events trigger a ratchet: a new participant joining the room, a user pressing the rotate button manually, and an automatic trigger after every 25 messages sent. At 25 messages the per-sender post-compromise security window is short at normal chat pace, and the cost is roughly one ML-KEM encap per peer. The overhead is invisible to the user.
+
+When a ratchet fires, the ratchet_step wire message carries both the key material and the first encrypted message of the new epoch. Each peer gets their own kemCt, a shared encSeed encrypted with the KEM-derived symmetric key, and the sender's new ratchet public key. After a receiver decapsulates, their own ratchet keypair rotates and they broadcast the replacement via ek_update. The keypair that just decapsulated is gone.
+
+Per-pair ratchet channels require quadratic state in a group. A 10-person room would mean 90 distinct channel states, each consuming memory and requiring coordination. The state grows quadratically with participants.
+
+COVCOM uses the Sender Keys model instead. Each participant maintains exactly one send chain. Everyone with access to your chain seed independently derives the same XChaCha20 message keys from the same chain state. The state is linear in participant count: one chain per sender, not per pair.
+
+Balbás et al. note that vanilla Sender Keys alone is not sufficient for post-compromise security. PCS only fires on member removal and re-add, leaving a passive adversary who compromised any member's state free to eavesdrop indefinitely until that event occurs. The KEM ratchet in COVCOM closes this gap directly. Join-triggered, manual, and auto-every-25 ratchets are all PCS boundaries that Sender Keys by itself does not provide.
+
+Distributing the chain seed to many people securely is where the KEM work happens. When you ratchet, you generate one 32-byte shared seed, then KEM-encrypt it separately for each peer. Each peer gets a distinct kemCt that only they can decapsulate, but the same seed once they do. They call ratchetInit on that seed, which derives an initial root key, send chain key, and receive chain key in a single 96-byte HKDF expansion. From there, your send chain and their receive chain of you are synchronized without any further communication.
+
+The room ID bytes travel as a context value through every HKDF call. Two sessions sharing the same chain seed in different rooms produce completely independent key material.
+
+Epochs are per-sender and independent. Alice can be at epoch 3 while Bob is still at epoch 1. Neither triggers the other's ratchet. When a receiver processes an incoming ratchet step, they prune sender state older than three epochs back, keeping the current epoch plus two previous. This is one wider than the Signal spec's ClearOldEpochs, which keeps only the current and previous; the extra window improves tolerance for messages that arrive slightly out of epoch order.
+
+A room is identified by a 32-byte ID and gated by a 16-byte roomSecret generated by the server at creation time. Both fields are encoded in the invite: a binary blob serialized as version byte, room ID, room secret, and an optional DNS field, totalling 49 bytes minimum. The invite is armored into a PEM-like block for copy-paste sharing or saved as a .room file.
+
+When you join, your client creates a fresh Session with a new keypair generated at that moment. You send identify, and every existing member immediately relays their current chain seed to you: a KEM-encrypted blob addressed to your new public key, carrying their current epoch number and the 32-byte seed for that epoch. You decrypt each blob, call ratchetInit on the seed, and set up a receive chain for each sender at whatever epoch they are actually at. If Alice is at epoch 3 and Bob is at epoch 1, you enter at exactly those positions, not at epoch 0.
+
+Once you have received a seed from every current member, you fire the welcome ratchet. The joiner always initiates this step, not the existing members — the joiner is the only principal guaranteed to be present at join time, so no host election is needed and the protocol stays symmetric. Your epoch advances, and you broadcast your fresh chain credentials to the group. Existing members set up receive chains for you and can now decrypt your messages. You are in.
+
+Messages sent while you were joining are not recoverable. You were not there; those XChaCha20 keys are gone. This is correct forward secrecy behavior.
+
+The server is a WebSocket message relay built with Bun. It is intentionally as ignorant as possible. It knows room IDs, usernames, public encapsulation keys and ratchet public keys per connection, and which connections are in which rooms. It sees encrypted blobs. It routes them. That is all it does.
+
+The server does not decrypt anything, store messages, or participate in key exchange. When it receives a relay message addressed to a peer, it forwards the ciphertext to that peer and nothing else. When it receives a broadcast, it fans the ciphertext out to every other connection in the room. It cannot read either.
+
+Rooms persist in memory until the TTL cron runs, defaulting to 24 hours of inactivity. This is not the server keeping a record of conversations — it is the server staying alive long enough for participants to reconnect after a dropped connection. When the last connection drops and the idle clock runs out, the room is deleted.
+
+The protocol involves four classes of principal. Participants are the clients in a session. Each participant generates a fresh keypair on every join. They have no persistent identity outside a session. Their private key material lives only in the client process and is wiped on disconnect.
+
+The relay server is a potentially dishonest principal with constrained capabilities. It routes messages, tracks room membership, and holds session public keys. It sees only ciphertext. The protocol is designed so that server dishonesty cannot violate confidentiality, only availability and metadata.
+
+The delivery network between clients and the server, including the transport layer, ISPs, and any infrastructure carrying packets, is fully controlled by the adversary.
+
+The protocol's security rests on a set of hardness assumptions. The adversary is assumed computationally bounded and unable to break any of them.
+
+ML-KEM-768 IND-CCA2: the adversary cannot recover the encapsulated shared secret from a KEM ciphertext without the decapsulation key. This holds against classical and quantum adversaries.
+
+HKDF-SHA-256 PRF security: the key derivation function behaves as a pseudorandom function. The adversary cannot distinguish its output from random without knowledge of the input key material.
+
+XChaCha20-Poly1305 AEAD security: the adversary cannot decrypt a ciphertext or forge a valid authentication tag without the key. The 192-bit nonce space makes accidental nonce reuse negligible regardless of message volume.
+
+The server occupies an unusual position: it is a required participant in message delivery but is explicitly not trusted with message content. The model makes this precise.
+
+The server is assumed to provide liveness. It will eventually deliver messages to their intended recipients. Without this assumption there is no protocol to analyze — a server that drops all messages trivially prevents communication but learns nothing cryptographically interesting. Availability attacks are outside the scope of this threat model.
+
+The server is honest-but-curious at minimum. It follows the protocol correctly but may log and analyze everything it observes. What it observes is bounded: room IDs, usernames, session public keys, ciphertext blobs, and connection timing. It never observes plaintext, chain keys, or KEM private keys.
+
+The server may be actively malicious with respect to metadata. It could lie about room membership in the joined message, presenting a fake member list or omitting members. It could reorder or selectively delay messages within a session. These attacks affect the session's consistency properties but not the confidentiality of individual messages. A dishonest server cannot forge a message that passes Poly1305 verification, cannot recover a chain key from observed ciphertext, and cannot decrypt a KEM-sealed chain seed addressed to a participant whose private key the server does not hold.
+
+Three adversary tiers cover the range of realistic attack scenarios. The passive network adversary observes all traffic between clients and the server but cannot modify messages in transit. This adversary learns ciphertext blobs, message sizes, timing, frequency, session duration, and the IP addresses of participants. The adversary does not learn message content, chain keys, or the plaintext of chain seed relay blobs.
+
+The harvest-now-decrypt-later variant of this passive adversary records ciphertext today and attempts decryption after acquiring a cryptographically relevant quantum computer. ML-KEM-768 is standardized for post-quantum resistance and defeats this attack.
+
+The active network adversary has full Dolev-Yao control of the network. This adversary can intercept, inject, replay, reorder, and drop any message. They control the delivery network entirely and may also corrupt the server.
+
+Against this adversary, the protocol provides confidentiality, replay resistance, and reorder tolerance. Injected or replayed ciphertexts fail Poly1305 authentication and are discarded. The adversary cannot construct a valid ciphertext without the current chain key. Each message envelope carries an epoch and counter. A replayed message from a previous epoch fails key resolution; a replayed message within the current epoch fails the counter check. Out-of-order messages within an epoch are handled by SkippedKeyStore up to MAX_SKIP. Messages reordered across epoch boundaries fail key resolution and are discarded.
+
+The active adversary can mount a denial-of-service by dropping messages or disrupting the join handshake. This is an availability attack, not a confidentiality or integrity failure.
+
+The state compromise adversary has active network capabilities plus the ability to expose the internal state of one or more participants at a point in time. State exposure means the adversary obtains all key material present in the session object at the moment of compromise: the current chain key, epoch seeds, and skipped key store. The adversary does not obtain keys that have already been wiped.
+
+In the forward compromise sub-case, the adversary obtains a participant's state at time T. Forward secrecy guarantees that the adversary cannot recover keys for any message sent before T. The KDFChain wipes each chain key before storing the next. Each message key is wiped immediately after use. Nothing in the current state allows reconstruction of past keys.
+
+In the persistent compromise sub-case, the adversary maintains continuous access to a participant's state across multiple epochs. Post-compromise security guarantees that at each KEM ratchet step, fresh randomness from kemRatchetEncap is mixed into the root key via HKDF expansion. The adversary cannot predict or reproduce this randomness without breaking ML-KEM-768. After a ratchet step completes, the adversary loses the ability to decrypt subsequent messages even if they retained the pre-ratchet state.
+
+Vanilla Sender Keys provides no post-compromise security. Compromise persists until a member is removed and re-added. The KEM ratchet closes this gap. Three events guarantee a PCS boundary: join, manual rotate, and auto-ratchet every 25 messages.
+
+The window of exposure under persistent compromise is bounded to roughly 25 messages per sender at normal chat pace. The Signal spec notes that dropped messages containing kemCt stall ratchet advancement, because the decapsulator cannot advance without the ciphertext. This is the fundamental asymmetry of KEM-based ratcheting versus classic DH, and it is an accepted tradeoff of the SPQR design.
+
+Against the adversaries defined above, COVCOM provides the following guarantees. No adversary tier recovers plaintext from observed ciphertext without the current chain key. Poly1305 ensures that every accepted message was encrypted by a principal holding the current chain key for that sender. The active adversary cannot forge a valid ciphertext. This is symmetric authentication; it does not provide cryptographic deniability.
+
+The forward compromise adversary cannot recover keys for messages sent before the compromise. Chain keys and message keys are wiped immediately after use. The persistent compromise adversary loses access to future messages after the next KEM ratchet step introduces fresh randomness.
+
+Several concerns are explicitly outside the scope of the threat model. If an adversary compromises the client device through malware, physical access, or operating system exploitation, all session key material is accessible. The protocol cannot protect against an adversary with direct access to the process memory or filesystem of a participant.
+
+The passive adversary observes message timing, frequency, and volume. COVCOM does not implement traffic shaping, padding, or cover traffic. An observer can infer that a session is active, how many messages were exchanged, and their approximate sizes.
+
+Poly1305 authentication uses a symmetric key. A participant who holds the chain key can prove to a third party that a given ciphertext was produced by someone holding that key. This is weaker than the deniability provided by Signal's use of X3DH, where the key material is structured to allow transcript forgery.
+
+The server could selectively deliver messages to different participants, causing divergent views of the conversation. COVCOM does not implement consistency checks across participants. A participant who rejoins a room with a new session will use a different keypair and username. The protocol does not prevent the same human from being correlated across sessions by out-of-band means such as same username choice, writing style, or timing patterns.
+
+The v3 design keeps per-sender epochs but fixes the late joiner problem by distributing the current epoch seed in relay blobs instead of the original chain seed. Each participant still owns their own send chain. The Sender Keys model is preserved. The join-triggered ratchet ensures every new participant starts fresh.
+
+Epochs are per-sender, not per-room. Each participant owns their own epoch counter, advancing it only when they personally initiate a ratchet step. There is no shared room-wide epoch counter. The epoch number is encoded in every broadcast message header so recipients know which send chain to use.
+
+The joining client initiates the welcome ratchet, not the existing members and not a designated host. The joiner is always present at join time by definition. No host election is needed. The protocol stays symmetric.
+
+When xero joins a room where alice is at epoch 0 and bob is at epoch 2, xero sends identify, the server sends peer_joined to alice and bob, alice sends xero a relay with her current epoch seed, and bob sends xero a relay with his current epoch seed. Xero decrypts both relays, sets up receive state for each sender at their current epoch, initiates a ratchet step to advance from epoch 0 to 1, and alice and bob process xero's ratchet step, setting up receive state for xero at epoch 1. Xero is now a full participant.
+
+Existing members send their current epoch seed in a relay on every peer_joined event. The epoch encoded in the relay tells the joiner exactly where that sender is.
+
+Between receiving joined and transitioning to ready, broadcasts from existing members are silently dropped. The window is milliseconds in practice. This is correct behavior for the case where the joiner was not present when those messages were sent.
+
+WebSocket connections drop on mobile networks, sleep and wake cycles, and network switching. When a client disconnects, the server fires handleClose, removes the connection from the room, and broadcasts peer_left to remaining members. The room is not deleted when peers reach zero. Rooms persist until the TTL cleanup cron fires.
+
+On reconnect, the WebSocket close is detected, the client shows an offline banner and disables chat input. Chat history stays visible; messages already on screen are not cleared. The client pings the health_check endpoint in a loop with backoff. On a 200 response, it re-opens the WebSocket, sends join with the saved roomId and roomSecret, receives joined, and sends identify with a fresh keypair. Normal handshake proceeds.
+
+Messages sent while offline are unrecoverable. This is correct forward secrecy behavior.
+
+If the username was taken by another client while offline, identify returns username_taken. The main screen re-appears so the user can choose a new name.
+
+The ratchet path must stay synchronous. The onMessage WebSocket handler runs to completion before the next message is processed. This is guaranteed by the JavaScript event loop only if the ratchet path contains no await points. The ratchet functions must remain plain synchronous functions. Async work, such as file encryption and pool operations, must be fire-and-forget via a catch handler.
+
+If an await is introduced between peer_joined and completing the ratchet step, the atomicity guarantee breaks and simultaneous join sequencing fails.
+
+Receiving a ratchet step must never trigger sending one. The only three triggers for an outbound ratchet step are peer_joined, user pressing the rotate button, and the auto-ratchet interval being exceeded before sending a message. Processing an inbound ratchet step only updates receive state. It never sends anything except ek_update. This prevents ratchet loops.
+
+The server remains a dumb broker. It never interprets payload contents, never stores keys, and never participates in epoch tracking.
+
+Forward secrecy is continuous. Each message uses a unique key from the current KDF chain. The chain key is stepped forward immediately and the old value wiped, so a later device compromise cannot decrypt past messages.
+
+Post-compromise security exists at ratchet step boundaries only. Between triggers, a compromised device can decrypt all messages on that send chain until the next ratchet fires. This is a fundamental property of sparse ratcheting. PCS boundaries are defined by three triggers: join-triggered welcome ratchet, manual rotate, and the auto-ratchet interval at 25 messages by default, configurable by the user.
+
+The 499-message hard ceiling is the absolute upper bound on PCS exposure per send chain. Per-sender independence is preserved. Alice's PCS window is governed by alice's own triggers, independent of bob's.
+
+The auto-ratchet interval is configurable with a default of 25. The state machine checks the session counter in doSendMessage and doSendFile before sealing. The check fires only when peers are present. At normal chat pace this gives a PCS boundary roughly every six to twelve minutes, with encap cost around 0.15 milliseconds per peer, invisible to the user.
+
+Each participant enforces their own interval independently. Alice at 25 and bob at 100 coexist without conflict, because epochs are per-sender.
+
+The check must not be inside sealMessage, because doRatchetStep calls sealMessage and putting the check there would cause infinite recursion.
+
+Benchmarks in the sandbox across 50 trials show encap at roughly 0.13 milliseconds median, decap at roughly 0.25 milliseconds median. A four-person 300-message session with five ratchets completes in around 60 milliseconds total, which is 0.20 milliseconds per message. Per-message ratcheting with 10 peers costs roughly 1.5 milliseconds per send, imperceptible in practice.
+
+The final implementation of the session module holds per-participant state across several fields. The encapsulation keypair handles incoming chain seeds from other participants. The ratchet keypair handles KEM ratchet steps. The initial chain seed is wiped after the first ratchet. A current epoch seed field tracks the seed used by late-joiner relays. A send chain object tracks the outgoing KDF chain. A send epoch counter tracks the current outgoing epoch. Per-peer maps hold the encap-direction and decap-direction root keys. Another map holds receive chain state per sender, including their chain, epoch, and skipped key store. An additional map holds pruned past epochs per sender for out-of-order tolerance. A fourth map holds each peer's current ratchet public key. A context buffer holds the room ID as HKDF context.
+
+The epoch keep window constant is set to 2, which keeps the current epoch plus two previous epochs, labelled N, N-1, and N-2. This is one wider than the Signal specification's recommendation, which keeps only current and immediately previous. The wider window improves tolerance for messages arriving slightly out of epoch order. The MAX_SKIP constant sets the ceiling on skipped key store entries per sender per epoch, preventing a malicious sender from forcing unbounded storage growth.
+
+Message encryption proceeds in several steps. First, the KDF chain step advances, producing a 32-byte message key. The Seal encrypt function with the XChaCha20 cipher takes the message key and plaintext and returns a ciphertext. The message key is wiped after use. The function returns the epoch number, the counter, and the ciphertext.
+
+Message decryption begins with key resolution. For current epoch messages, the chain is stepped to the counter, storing skipped keys up to MAX_SKIP. For previous epoch messages within the keep window, the old sender state map is consulted. For skipped keys, the skipped key store provides the entry, which is then deleted. The Seal decrypt function takes the resolved message key and ciphertext and returns plaintext. The message key is wiped after use.
+
+File attachments use the sealFileKey function, which returns a single-use 32-byte key. The caller encrypts via SealStreamPool with 65536-byte chunks processed by parallel WASM workers and wipes the key in a try-finally block.
+
+The ratchet step is called once per peer in a batch. For each peer, the KEM ratchet encap function takes the current encap root key, the peer's ratchet public key, and the room context, and returns a next root key, a send chain key, a receive chain key, and a KEM ciphertext. The Seal encrypt function encrypts a pending ratchet seed with the send chain key. The send chain key is wiped. The encap root for that peer is updated. The function returns the KEM ciphertext, the encrypted seed, and the previous chain counter.
+
+One 32-byte pending ratchet seed is shared across all peers in the batch. Each peer receives a distinct KEM ciphertext but the same seed once decapsulated. This gives linear state in participant count.
+
+The commit ratchet step disposes the old send chain, creates a new one from the pending seed, increments the send epoch, copies the pending seed to the current epoch seed field, and wipes the pending seed and the original chain seed.
+
+Receiving a ratchet step runs the KEM ratchet decap function with the current decap root key, the receiver's ratchet decapsulation key, the KEM ciphertext, and the room context. The output is a next root key, a send chain key, and a receive chain key. The Seal decrypt function decrypts the encrypted seed with the receive chain key. The receive chain key is wiped. The old sender chain is archived. The skipped key store advances to the boundary using the previous chain counter. The old sender state map is pruned of entries older than current epoch minus the keep window. The sender state is updated with a new KDF chain from the decrypted seed at the new epoch. The ratchet keypair is disposed and a fresh one is created.
+
+The ratchet keypair decap function wipes the decapsulation key in a try-finally block immediately after use. Each keypair decapsulates exactly once.
+
+The auto-ratchet fires in doSendMessage and doSendFile when the session counter reaches or exceeds the auto-ratchet interval of 25 and at least one peer is present. It does not fire inside sealMessage, because that would cause infinite recursion.
+
+The chain seed distribution uses a relay blob with a 36-byte plaintext: a four-byte little-endian epoch number followed by the 32-byte seed. The wrapChainSeedFor function takes a peer encap key and username, runs Seal encrypt with the Kyber suite, wipes the old map entry before overwrite, and sends a relay wire message to the peer.
+
+The unwrapChainSeed function takes the sender username and the blob, runs Seal decrypt with the Kyber suite to produce a 36-byte plaintext, reads the epoch from bytes zero through three as a little-endian uint32, runs ratchetInit with the seed and the room context, sets the sender state at the decoded epoch rather than hardcoded zero, and wipes the full 36-byte plaintext buffer.
+
+All WebSocket messages are JSON with a type field. Inbound messages from the client include create with an optional admin token, join with the room ID and room secret, identify with the username and public keys, relay with the destination peer and payload, broadcast with the payload and metadata, ratchet step with per-peer payloads plus the sender's new public key plus the initial encrypted message of the new epoch, ek update for broadcasting a new encapsulation key after a ratchet, and rekey for updating keys in the lobby without a peer joined broadcast.
+
+Outbound messages from the server include room_created with the room ID and room secret, joined with the current member list, peer_joined announcing a new member with their public keys, peer_left on disconnect, relay forwarding a chain seed blob, broadcast forwarding an encrypted message, ratchet_step_fwd carrying per-peer ratchet step delivery, ek_update_fwd forwarding a new encapsulation key, rekeyed acknowledging a rekey request, and error with a reason string.
+
+The ratchet_step wire message carries both the key material and the first encrypted message of the new epoch in a single atomic event. The payload field is a sealMessage ciphertext at the new epoch. Receivers decrypt it after applying the ratchet step.
+
+The invite is a binary blob with a minimum length of 49 bytes. The version byte is the first byte, set to 0x01 for the current version. The room ID occupies 32 bytes, encoded as a UTF-8 hex string. The room secret occupies 16 bytes of raw random data. An optional variable-length DNS field follows.
+
+The room secret is 16 bytes of Fortuna CSPRNG output, server-generated at room creation, never transmitted in plaintext outside the invite blob. The armored format wraps a base64 encoding of the binary blob in BEGIN and END markers. Invite files use the naming convention covcom-roomid.room. The parser validates the invite version. Old invite files with different armor headers or binary layouts are rejected with no migration path.
+
+Key hygiene is enforced at every handling point. The KDFChain chain key is wiped before each replacement in step. The message key is wiped after each AEAD operation in a try-finally block. The ratchet keypair decapsulation key is wiped after each decap call in a try-finally block. The pending ratchet seed is wiped in commitRatchetStep after the new KDF chain is constructed. The initial chain seed is wiped in commitRatchetStep after the first ratchet.
+
+The send chain key from kemRatchetEncap is wiped after the encrypted seed is produced. The receive chain key from kemRatchetDecap is wiped after the encrypted seed is decrypted. The KEM shared secret is wiped inside leviathan-crypto before returning. The 36-byte relay plaintext buffer is wiped after unwrapChainSeed extracts the seed. The file message key is wiped in a try-finally block in the caller. The full session is wiped on WebSocket close, tab unload, or SIGTERM.
+
+The wipe function zeroes the buffer in place. Wiped buffers are not reused.

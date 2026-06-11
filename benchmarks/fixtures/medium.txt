@@ -1,0 +1,27 @@
+COVCOM encrypts every message with XChaCha20-Poly1305. That is the foundation. The post-quantum KEM, the double ratchet, and the epoch machinery are all built around a single purpose — getting a fresh, unique XChaCha20 key to the right people at the right time.
+
+XChaCha20 is fast, audited, and carries a 192-bit nonce space that makes accidental nonce reuse practically impossible regardless of message volume. Poly1305 authenticates every ciphertext, so a garbled or tampered message fails authentication before any plaintext is produced. Each message key is used exactly once, then wiped.
+
+File attachments use the same cipher through SealStreamPool, a chunked streaming wrapper that splits payloads into 65 KB frames and processes them in parallel across worker threads. The file key comes from the same chain as regular message keys and travels in the broadcast metadata, never in plaintext.
+
+Each participant owns one send chain. It is stateful and forward-secret, implemented as a KDFChain from the leviathan-crypto ratchet module. Every call to step() runs HKDF-SHA-256 over the current chain key with a big-endian uint64 counter in the info bytes, producing a new chain key and a fresh 32-byte message key. The old chain key is wiped before the new one is stored. Calling step() on an already-disposed chain throws; the stateful design makes reuse structurally impossible.
+
+This is the symmetric-key ratchet from the Double Ratchet spec. Because message keys are not used to derive anything else, you can delete a key the moment you finish with it without affecting any other message's security. A device compromised after a conversation ends cannot reconstruct the XChaCha20 keys that protected it.
+
+Out-of-order delivery is handled by SkippedKeyStore, which advances the chain past gaps while caching keys for messages that may still arrive. A ceiling on cached keys prevents a malicious sender from forcing unbounded storage growth.
+
+A chain that never refreshes only solves half the problem. If someone compromises a chain key today, they can decrypt every future message in that chain until someone catches on. The ratchet limits that window by periodically generating a new chain seed from fresh cryptographic material.
+
+The Double Ratchet algorithm was originally published as the Axolotl Ratchet in 2013 — named for the Mexican salamander famous for regenerating lost limbs. The name fits: compromise a key, the next ratchet step heals it. The rename to Double Ratchet happened before the first public spec release, but the regeneration metaphor stuck.
+
+Classic Signal uses Diffie-Hellman for the ratchet step. Each party publishes a new ephemeral public key with every message, and the DH output mixes into the root key, refreshing the chain. Both parties can compute the shared output simultaneously, so classic DR ratchets on every exchange.
+
+COVCOM uses ML-KEM-768 (Kyber, FIPS 203) instead. ML-KEM is a Key Encapsulation Mechanism: the encapsulator generates a fresh ciphertext and shared secret in one operation; the decapsulator recovers the same secret from the ciphertext. That shared secret feeds into root key derivation via HKDF-SHA-256, expanding to 96 bytes of output: a new root key, a new send chain key, and a new receive chain key, all derived in one pass.
+
+The reason for 96 bytes rather than the classic 64 is that one KEM epoch spawns both the send chain and the receive chain simultaneously. In classic DR, a DH step spawns one new chain at a time because it requires two DH exchanges in alternation. ML-KEM is non-interactive on the encapsulator's side, so both chains can emerge from a single operation.
+
+The asymmetry of ML-KEM changes how the ratchet behaves. In classic DH, both parties can advance independently from their own computation. With ML-KEM, the encapsulator goes first; the decapsulator cannot advance until the KEM ciphertext arrives in a message header. This is why the protocol is a Sparse Post-Quantum Ratchet: you cannot ratchet on every single message because the KEM ciphertext for ML-KEM-768 is 1088 bytes, and that overhead on every message would be impractical.
+
+Three events trigger a ratchet: a new participant joining the room, a user pressing the rotate button manually, and an automatic trigger after every 25 messages sent. At 25 messages the per-sender post-compromise security window is short at normal chat pace, and the cost is roughly one ML-KEM encap per peer (about 0.13 ms each, benchmarked in the sandbox). The overhead is invisible to the user.
+
+When a ratchet fires, the ratchet_step wire message carries both the key material and the first encrypted message of the new epoch. Each peer gets their own kemCt, a shared encSeed encrypted with the KEM-derived symmetric key, and the sender's new ratchet public key. After a receiver decapsulates, their own ratchet keypair rotates and they broadcast the replacement via ek_update. The keypair that just decapsulated is gone.

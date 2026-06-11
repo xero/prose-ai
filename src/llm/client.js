@@ -2,11 +2,13 @@
 // ║   prose-ai — llm client       ║
 // ╚═══════════════════════════════╝
 
-import { buildPrompt, validateOutput }               from './prompt.js';
+import { buildPrompt, validateOutput }           from './prompt.js';
 import { BACKEND_URL, BACKEND_KEY, MODEL,
-         CHUNK_CHAR_BUDGET, MAX_CONCURRENT, NUM_CTX } from './config.js';
+         CHUNK_CHAR_BUDGET, CONTEXT_CHAR_CAP,
+         MAX_CONCURRENT, MAX_TOKENS,
+         TEMPERATURE, EXTRA_BODY }               from './config.js';
 import { walkDocument }                          from './walker.js';
-import { packChunks }                            from './packer.js';
+import { packChunks, withContext }               from './packer.js';
 import { RequestPool }                           from './pool.js';
 
 const pool = new RequestPool({ limit: MAX_CONCURRENT });
@@ -24,7 +26,7 @@ export async function* analyze(doc, mode, types) {
 	const myToken = ++token;
 
 	const blocks = walkDocument(doc, mode);
-	const chunks = packChunks(blocks, CHUNK_CHAR_BUDGET);
+	const chunks = withContext(packChunks(blocks, CHUNK_CHAR_BUDGET), blocks, CONTEXT_CHAR_CAP);
 
 	if (chunks.length === 0) return;
 
@@ -41,10 +43,12 @@ export async function* analyze(doc, mode, types) {
 					'Authorization': `Bearer ${BACKEND_KEY}`,
 				},
 				body:    JSON.stringify({
-					model:    MODEL,
-					messages: [{ role: 'user', content: buildPrompt(chunk.text, mode, types) }],
-					stream:   false,
-					options:  { num_ctx: NUM_CTX },
+					model:       MODEL,
+					messages:    [{ role: 'user', content: buildPrompt(chunk.text, mode, types, chunk.context) }],
+					stream:      false,
+					max_tokens:  MAX_TOKENS,
+					temperature: TEMPERATURE,
+					...EXTRA_BODY,
 				}),
 				signal,
 			});
@@ -68,20 +72,35 @@ export async function* analyze(doc, mode, types) {
 		return validateOutput(data.choices?.[0]?.message?.content ?? '', chunk.text);
 	});
 
-	for await (const result of pool.runProgressive(jobs)) {
+	// two waves: the first chunk goes alone so feedback appears as fast as
+	// the model can produce one response; the rest then run at full
+	// concurrency (batched streams finish together, so a single all-at-once
+	// wave would delay the first visible suggestion by the whole batch).
+	const waves = [
+		{ jobs: jobs.slice(0, 1), offset: 0 },
+		{ jobs: jobs.slice(1),    offset: 1 },
+	];
+
+	for (const wave of waves) {
+		if (wave.jobs.length === 0) continue;
 		if (token !== myToken) {
 			throw new DOMException('Aborted', 'AbortError');
 		}
-		if (result.status === 'aborted') {
-			throw new DOMException('Aborted', 'AbortError');
+		for await (const result of pool.runProgressive(wave.jobs)) {
+			if (token !== myToken) {
+				throw new DOMException('Aborted', 'AbortError');
+			}
+			if (result.status === 'aborted') {
+				throw new DOMException('Aborted', 'AbortError');
+			}
+			yield {
+				type:        'chunk',
+				index:       result.index + wave.offset,
+				total,
+				suggestions: result.status === 'fulfilled' ? result.value : [],
+				error:       result.status === 'rejected'  ? result.reason : null,
+			};
 		}
-		yield {
-			type:        'chunk',
-			index:       result.index,
-			total,
-			suggestions: result.status === 'fulfilled' ? result.value : [],
-			error:       result.status === 'rejected'  ? result.reason : null,
-		};
 	}
 }
 

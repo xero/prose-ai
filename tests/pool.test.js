@@ -3,6 +3,22 @@ import { RequestPool }            from '../src/llm/pool.js';
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+describe('sequential runProgressive waves', () => {
+	test('a pool can run two progressive batches back to back', async () => {
+		const pool = new RequestPool({ limit: 2 });
+		const job  = (v) => async () => v;
+
+		const first = [];
+		for await (const r of pool.runProgressive([job('a')])) first.push(r);
+		expect(first).toEqual([{ index: 0, status: 'fulfilled', value: 'a' }]);
+
+		const second = [];
+		for await (const r of pool.runProgressive([job('b'), job('c')])) second.push(r);
+		expect(second.length).toBe(2);
+		expect(second.every(r => r.status === 'fulfilled')).toBe(true);
+	});
+});
+
 describe('RequestPool', () => {
 	test('runs 5 jobs with limit 2, at most 2 concurrent', async () => {
 		const pool   = new RequestPool({ limit: 2 });

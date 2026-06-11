@@ -1,0 +1,7 @@
+COVCOM encrypts every message with XChaCha20-Poly1305. That is the foundation. The post-quantum KEM, the double ratchet, and the epoch machinery are all built around a single purpose — getting a fresh, unique XChaCha20 key to the right people at the right time.
+
+XChaCha20 is fast, audited, and carries a 192-bit nonce space that makes accidental nonce reuse practically impossible regardless of message volume. Poly1305 authenticates every ciphertext, so a garbled or tampered message fails authentication before any plaintext is produced. Each message key is used exactly once, then wiped.
+
+File attachments use the same cipher through SealStreamPool, a chunked streaming wrapper that splits payloads into 65 KB frames and processes them in parallel across worker threads. The file key comes from the same chain as regular message keys and travels in the broadcast metadata, never in plaintext.
+
+Each participant owns one send chain. It is stateful and forward-secret, implemented as a KDFChain from the leviathan-crypto ratchet module. Every call to step() runs HKDF-SHA-256 over the current chain key with a big-endian uint64 counter in the info bytes, producing a new chain key and a fresh 32-byte message key. The old chain key is wiped before the new one is stored.

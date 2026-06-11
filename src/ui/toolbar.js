@@ -111,7 +111,7 @@ export const initToolbar = (editor) => {
 
 		clearSuggestions(editor);
 		setLoading(true);
-		setStatus('waiting for ollama…', 'loading');
+		setStatus('waiting for model…', 'loading');
 		analyzing = true;
 
 		let completed    = 0;
