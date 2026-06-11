@@ -17,3 +17,7 @@ initToolbar(editor);
 initSidebar(editor);
 initTooltip(editor);
 initBubbleMenu(editor);
+
+// exposed for browser-automation debugging (playwright drives accept/reject
+// and inspects marks through this)
+window.__editor = editor;

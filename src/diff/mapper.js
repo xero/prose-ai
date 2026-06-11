@@ -8,11 +8,22 @@ const dmp = new diff_match_patch();
 
 // build a flat char array + full plain text from the editor doc
 // chars[i] = { nodePos, offsetInNode } so we can convert text offsets → PM positions
+// block boundaries become '\n' sentinel entries (nodePos: -1) so a match can
+// never silently span two paragraphs ("…end.Start…" would otherwise match)
 const buildTextMap = (doc) => {
 	const chars = [];
 	let text = '';
+	let lastBlock = null;
 
 	doc.descendants((node, pos) => {
+		if (node.isTextblock) {
+			if (lastBlock !== null) {
+				text += '\n';
+				chars.push({ nodePos: -1, offsetInNode: 0 });
+			}
+			lastBlock = pos;
+			return;
+		}
 		if (!node.isText) return;
 		for (let i = 0; i < node.text.length; i++) {
 			chars.push({ nodePos: pos, offsetInNode: i });
@@ -21,6 +32,14 @@ const buildTextMap = (doc) => {
 	});
 
 	return { text, chars };
+};
+
+// a usable match may not contain a block-boundary sentinel
+const crossesBlocks = (chars, offset, length) => {
+	for (let i = offset; i < offset + length; i++) {
+		if (chars[i]?.nodePos === -1) return true;
+	}
+	return false;
 };
 
 // convert a text-offset into a ProseMirror absolute position
@@ -69,18 +88,31 @@ export const mapSuggestions = (editor, suggestions, hintPos = null) => {
 		// ── 1. exact substring match, from the chunk onward ──
 		let exactIdx = text.indexOf(s.original, hintOffset);
 		if (exactIdx === -1) exactIdx = text.indexOf(s.original);
+		while (exactIdx !== -1 && crossesBlocks(chars, exactIdx, s.original.length)) {
+			exactIdx = text.indexOf(s.original, exactIdx + 1);
+		}
 		if (exactIdx !== -1) {
 			from = offsetToPos(chars, exactIdx);
 			to   = exclusiveEnd(chars, exactIdx, s.original.length);
 		}
 
 		// ── 2. fuzzy fallback (model sometimes paraphrases) ──
+		// match_main throws on patterns > 32 chars and can return loose hits,
+		// so guard it and only trust a window that mostly equals the original
 		if (from === null) {
-			const fuzzyIdx = dmp.match_main(text, s.original, hintOffset);
-			if (fuzzyIdx !== -1) {
-				from = offsetToPos(chars, fuzzyIdx);
-				to   = exclusiveEnd(chars, fuzzyIdx, s.original.length);
-				console.info(`[prose-ai] fuzzy match "${s.original}" at offset ${fuzzyIdx}`);
+			let fuzzyIdx = -1;
+			try { fuzzyIdx = dmp.match_main(text, s.original.slice(0, 32), hintOffset); }
+			catch { /* pattern unusable — treat as no match */ }
+			if (fuzzyIdx !== -1 && !crossesBlocks(chars, fuzzyIdx, s.original.length)) {
+				const window = text.slice(fuzzyIdx, fuzzyIdx + s.original.length);
+				const common = dmp.diff_main(window, s.original)
+					.filter(d => d[0] === 0)
+					.reduce((n, d) => n + d[1].length, 0);
+				if (common / s.original.length >= 0.8) {
+					from = offsetToPos(chars, fuzzyIdx);
+					to   = exclusiveEnd(chars, fuzzyIdx, s.original.length);
+					console.info(`[prose-ai] fuzzy match "${s.original}" at offset ${fuzzyIdx}`);
+				}
 			}
 		}
 

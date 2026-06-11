@@ -4,19 +4,23 @@
 
 import { Mark, mergeAttributes } from '@tiptap/core';
 
-// walk the doc and return {from, to} for the first mark with matching id
-// returns null if not found
+// walk the doc and return the full {from, to} of the mark with matching id.
+// a single suggestion span is stored as SEVERAL text nodes whenever it
+// crosses a formatting boundary (bold, italic, link), so the range must
+// cover every node carrying the id — stopping at the first one corrupts
+// accept (partial replace) and reject (partial unhighlight).
 const findMarkRange = (doc, markType, id) => {
-	let found = null;
+	let from = null, to = null, mark = null;
 	doc.descendants((node, pos) => {
-		if (found) return false;  // stop once located
 		if (!node.isText) return;
 		const m = node.marks.find(
 			m => m.type === markType && m.attrs.id === id
 		);
-		if (m) found = { from: pos, to: pos + node.nodeSize, mark: m };
+		if (!m) return;
+		if (from === null) { from = pos; mark = m; }
+		to = pos + node.nodeSize;
 	});
-	return found;
+	return from === null ? null : { from, to, mark };
 };
 
 export const SuggestionMark = Mark.create({
