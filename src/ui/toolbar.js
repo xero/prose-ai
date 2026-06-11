@@ -114,10 +114,10 @@ export const initToolbar = (editor) => {
 		setStatus('waiting for model…', 'loading');
 		analyzing = true;
 
-		let completed    = 0;
-		let total        = 0;
-		let failed       = 0;
-		const allSuggestions = [];
+		let completed = 0;
+		let total     = 0;
+		let failed    = 0;
+		let applied   = 0;
 
 		try {
 			for await (const event of analyze(doc, mode, types)) {
@@ -126,21 +126,24 @@ export const initToolbar = (editor) => {
 					setStatus(`analyzing 0/${total}…`, 'loading');
 					continue;
 				}
+				if (event.type === 'suggestion') {
+					// each suggestion lands in the editor the moment it streams in
+					const mapped = mapSuggestions(editor, [event.suggestion], event.chunkFrom);
+					applyMappedSuggestions(editor, mapped);
+					applied += mapped.length;
+					continue;
+				}
 				if (event.type === 'chunk') {
 					completed++;
 					if (event.error) {
 						failed++;
 						console.warn('[prose-ai] chunk failed:', event.error);
-					} else {
-						allSuggestions.push(...event.suggestions);
-						const mapped = mapSuggestions(editor, event.suggestions);
-						applyMappedSuggestions(editor, mapped);
 					}
 					setStatus(`analyzing ${completed}/${total}…`, 'loading');
 				}
 			}
 
-			const n = allSuggestions.length;
+			const n = applied;
 			let msg = n
 				? `${n} suggestion${n === 1 ? '' : 's'} found`
 				: 'no suggestions found';

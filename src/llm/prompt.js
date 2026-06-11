@@ -23,19 +23,16 @@ const MODE_PROMPTS = {
 		'8. No em dashes in prose. If the source has one, rewrite the sentence. An aside that drops in with commas takes commas. Two related clauses take a semicolon or split into two sentences. An addition or contrast starts a new sentence. An appositive folds into the sentence structure.',
 		'9. No colons as prose shortcuts. "The result: failure" becomes "The result was a failure". Colons stay fine for lists, times, and ratios.',
 		'',
-		'Examples of the transform:',
+		'Examples of the transform (note the originals are the smallest span that fixes the problem):',
 		'',
-		'Original: The cutting-edge solution delivers unparalleled results by leveraging our proprietary approach, a true gamechanger in today market.',
-		'Improved: Our tool produces better results than competing approaches.',
+		'Original: delivers unparalleled results by leveraging',
+		'Improved: produces better results using',
 		'',
-		'Original: It is not just about speed, it is also about reliability. This is achieved through careful engineering.',
-		'Improved: Speed matters, but reliability matters more. Careful engineering produces both.',
+		'Original: implementation of the new protocol resulted in a 40% reduction in latency',
+		'Improved: the new protocol cut latency by 40%',
 		'',
-		'Original: The evaluation demonstrated that implementation of the new protocol resulted in a 40% reduction in latency.',
-		'Improved: The new protocol cut latency by 40%.',
-		'',
-		'Original: The team, which had been working on the project for months, finally achieved a breakthrough that significantly improved the overall system performance.',
-		'Improved: After months of work, the team found a change that sped the system up.',
+		'Original: It is not just about speed, it is also about reliability.',
+		'Improved: Speed matters, but reliability matters more.',
 		'',
 		'Change only what needs changing. Do not rewrite clean prose just to rewrite it. But always find at least one improvement. Dense technical writing can always read more naturally.',
 		'',
@@ -56,10 +53,15 @@ const SHARED_RULES = (text, context) => [
 	'  "original"     — the verbatim substring from the text you are changing',
 	'  "replacement"  — your improved version of that substring',
 	'  "type"         — exactly one of: grammar, vocabulary, clarity, tone',
-	'  "explanation"  — one sentence explaining the improvement',
+	'  "explanation"  — why, in 8 words or fewer',
 	'',
 	'Example of a valid item:',
-	'{"original":"in order to","replacement":"to","type":"clarity","explanation":"Removes unnecessary words without changing meaning."}',
+	'{"original":"in order to","replacement":"to","type":"clarity","explanation":"cuts filler"}',
+	'',
+	'Keep items SMALL. "original" must be the shortest span that needs to',
+	'change — a word or phrase, not the whole sentence. Quote a full sentence',
+	'only when you are restructuring it (splitting, reordering, merging).',
+	'Never quote more than one sentence in a single item.',
 	'',
 	'Hard rules — apply in every mode regardless of what mode says:',
 	'- Fix all spelling and capitalization errors',
@@ -147,42 +149,49 @@ export const validateOutput = (raw, sourceText) => {
 
 	const valid = [];
 	for (const item of parsed) {
-		// must have original and replacement as strings
-		if (
-			typeof item?.original    !== 'string' ||
-			typeof item?.replacement !== 'string'
-		) {
-			console.warn('[prose-ai] dropping malformed suggestion:', item);
-			continue;
-		}
-
-		// drop suggestions where nothing actually changes
-		if (item.original === item.replacement) {
-			console.warn('[prose-ai] dropping no-op suggestion:', item.original);
-			continue;
-		}
-
-		// original must be a verbatim substring of the source text
-		if (!sourceText.includes(item.original)) {
-			console.warn('[prose-ai] dropping unlocatable suggestion:', item.original);
-			continue;
-		}
-
-		// fall back gracefully when model omits type/explanation (common in rewrite mode)
-		const type        = VALID_TYPES.includes(item.type) ? item.type : 'clarity';
-		const explanation = typeof item.explanation === 'string' ? item.explanation : '';
-
-		if (item.type && !VALID_TYPES.includes(item.type)) {
-			console.warn('[prose-ai] unknown type coerced to clarity:', item.type);
-		}
-
-		valid.push({
-			original: item.original,
-			replacement: item.replacement,
-			type,
-			explanation,
-		});
+		const v = validateItem(item, sourceText);
+		if (v) valid.push(v);
 	}
 
 	return valid;
+};
+
+// validateItem(item, sourceText) → {original, replacement, type, explanation} | null
+// the per-suggestion checks, shared by validateOutput and the stream path
+export const validateItem = (item, sourceText) => {
+	// must have original and replacement as strings
+	if (
+		typeof item?.original    !== 'string' ||
+		typeof item?.replacement !== 'string'
+	) {
+		console.warn('[prose-ai] dropping malformed suggestion:', item);
+		return null;
+	}
+
+	// drop suggestions where nothing actually changes
+	if (item.original === item.replacement) {
+		console.warn('[prose-ai] dropping no-op suggestion:', item.original);
+		return null;
+	}
+
+	// original must be a verbatim substring of the source text
+	if (!sourceText.includes(item.original)) {
+		console.warn('[prose-ai] dropping unlocatable suggestion:', item.original);
+		return null;
+	}
+
+	// fall back gracefully when model omits type/explanation (common in rewrite mode)
+	const type        = VALID_TYPES.includes(item.type) ? item.type : 'clarity';
+	const explanation = typeof item.explanation === 'string' ? item.explanation : '';
+
+	if (item.type && !VALID_TYPES.includes(item.type)) {
+		console.warn('[prose-ai] unknown type coerced to clarity:', item.type);
+	}
+
+	return {
+		original: item.original,
+		replacement: item.replacement,
+		type,
+		explanation,
+	};
 };
