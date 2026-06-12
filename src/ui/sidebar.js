@@ -75,11 +75,9 @@ const render = (suggestions, editor) => {
 
 	el.empty.style.display = 'none';
 
-	// group by type for visual organisation: grammar → vocabulary → clarity → tone
-	const ORDER = ['grammar', 'vocabulary', 'clarity', 'tone'];
-	const sorted = [...suggestions].sort(
-		(a, b) => ORDER.indexOf(a.type) - ORDER.indexOf(b.type)
-	);
+	// document order — suggestions stream in as chunks finish, but the
+	// sidebar reads top-to-bottom like the document does
+	const sorted = [...suggestions].sort((a, b) => a.from - b.from);
 
 	for (const s of sorted) {
 		el.list.appendChild(renderCard(s, editor));
