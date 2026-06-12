@@ -9,15 +9,21 @@
 
 **Four editorial modes.** Proofread, Rewrite, Formalize, and Concise. Proofread lets you toggle the suggestion types you care about (grammar, vocabulary, clarity, tone).
 
-**Streaming suggestions.** prose-ai splits the document into paragraph chunks and analyzes them concurrently. Each suggestion lands in the editor the moment the model finishes writing it; the first underline appears in seconds while the rest of the document is still processing. Triage from the start, no waiting for the full run.
+**Inline tracked changes.** Suggestions render directly in your prose as changesets: deletions struck out in place, insertions highlighted, unchanged words untouched. Sub-word edits expand to whole words; punctuation-only edits stay surgical. Underneath, the document holds only your original text (insertions are a visual overlay), so copy, paste, and saves stay clean until you accept.
 
-**Inline diffs.** The tooltip and sidebar render each suggestion as a single inline run: unchanged context plain, deletions struck out, insertions highlighted. Sub-word edits expand to whole words; punctuation-only edits stay surgical.
+**Streaming suggestions.** prose-ai splits the document into paragraph chunks and analyzes them concurrently. Each suggestion lands in the editor the moment the model finishes writing it; the first change appears in seconds while the rest of the document is still processing. Triage from the start, no waiting for the full run.
+
+**Triage anywhere.** On desktop, a single click on a change locates its card in the sidebar (pinned to the top of the list and expanded, with accept and reject), and a double-click opens a mini accept/reject popup right at the pointer. On mobile, a tap opens a tooltip with the full details and actions. The sidebar always lists suggestions in document order.
+
+**Undo button.** A pointer twin of ctrl+z in the toolbar, accepted suggestions included. It lights up amber whenever there is something to take back.
 
 **Context-aware chunks.** Each chunk carries the preceding paragraphs as read-only context, so a pronoun whose antecedent lives in the previous paragraph is not flagged as unclear.
 
 **Synonyms.** Highlight any word or phrase for contextual alternatives via the bubble menu.
 
 **Crash recovery.** If the backend dies mid-run (Metal under memory pressure aborts the whole process), the run pauses with its suggestions intact and the status shows what completed. Press analyze to resume the unfinished chunks; the supervisor in `start.sh` restarts the server automatically.
+
+**Nothing lost on reload.** The document and any suggestions you have not triaged yet persist locally and come back on the next visit.
 
 **Small screens.** Below 768px the sidebar becomes a bottom sheet that peeks in when suggestions exist. On desktop, drag the sidebar edge to resize it.
 
