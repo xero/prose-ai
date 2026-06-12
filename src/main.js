@@ -3,7 +3,7 @@
 // ╚═══════════════════════════════╝
 
 import { editor }          from './editor.js';
-import { watchSuggestions } from './state/suggestions.js';
+import { watchSuggestions, notifySuggestions } from './state/suggestions.js';
 import { initToolbar }     from './ui/toolbar.js';
 import { initSidebar }     from './ui/sidebar.js';
 import { initTooltip }     from './ui/tooltip.js';
@@ -21,6 +21,10 @@ initTooltip(editor);
 initBubbleMenu(editor);
 initResizer();
 initSheet();
+
+// suggestions persist with the document — surface any restored from the
+// last session now that every panel is listening
+notifySuggestions(editor);
 
 // exposed for browser-automation debugging (playwright drives accept/reject
 // and inspects marks through this)

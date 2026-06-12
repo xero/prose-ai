@@ -78,6 +78,13 @@ export const watchSuggestions = (editor) => {
 	});
 };
 
+// emit the current suggestion state on demand. the document (marks
+// included) persists across reloads, but the panels only hear about
+// suggestions through change events — call this once at startup, after
+// every panel has subscribed, so restored marks appear in the sidebar
+// and sheet too
+export const notifySuggestions = (editor) => dispatchChanged(editor);
+
 // fire a DOM event with the current suggestion list as detail
 // sidebar, toolbar, and tooltip all listen to this
 const dispatchChanged = (editor) => {
