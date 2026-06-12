@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════════════╗
-// ║   prose-ai — benchmark runner         ║
-// ╚═══════════════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  benchmark runner
 
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { execSync } from 'child_process';

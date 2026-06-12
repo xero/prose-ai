@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════╗
-// ║   prose-ai — synonyms LLM    ║
-// ╚═══════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  synonyms LLM
 
 import { BACKEND_URL, BACKEND_KEY, MODEL,
 	MAX_TOKENS, TEMPERATURE, EXTRA_BODY } from './config.js';

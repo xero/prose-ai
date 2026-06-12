@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════╗
-// ║   prose-ai — editor           ║
-// ╚═══════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  editor
 // singleton tiptap instance — imported by everything that needs the editor
 
 import { Editor } from '@tiptap/core';

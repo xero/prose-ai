@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════╗
-// ║   prose-ai — tooltip          ║
-// ╚═══════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  tooltip
 
 import { renderDiff }          from '../diff/render.js';
 import { setSuggestionFocus }  from '../extensions/suggestion.js';

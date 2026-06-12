@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════╗
-// ║   prose-ai — toolbar          ║
-// ╚═══════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  toolbar
 
 import { analyze, cancelAnalysis, canResume } from '../llm/client.js';
 import { mapSuggestions }                     from '../diff/mapper.js';

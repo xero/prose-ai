@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════╗
-// ║   prose-ai — main entry       ║
-// ╚═══════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  main entry
 
 import { editor }          from './editor.js';
 import { watchSuggestions, notifySuggestions } from './state/suggestions.js';

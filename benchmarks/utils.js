@@ -1,6 +1,7 @@
-// ╔═══════════════════════════════════════╗
-// ║   prose-ai — benchmark utilities     ║
-// ╚═══════════════════════════════════════╝
+//  ▓██▀█ ▓██▀█ ▓██▀█   ▓██▀█ ▓██▀█    ▓██▀█ ▀▀
+//  ▒██▄█ ▒██▄▀ ▒██ █   ▒██   ▒██▄  █▒ ▒██▄█ ██░
+//  ███   ███ █ ███▄█ █▄███   ███▄▄    ███ █ ██▒
+//  benchmark utilities
 
 // buildDocFromText(text) — converts plain text to a minimal
 // ProseMirror-compatible doc that walkDocument() can consume.
