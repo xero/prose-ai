@@ -18,6 +18,18 @@ const pool = new RequestPool({ limit: MAX_CONCURRENT });
 // so a stale run can detect it was superseded and throw AbortError.
 let token = 0;
 
+// when the backend dies mid-run the run PAUSES: applied suggestions stay,
+// finished chunks are remembered here, and the next analyze press resumes
+// just the unfinished ones. a completed run clears this → fresh sweep.
+let paused = null;  // { mode, types: [], doneTexts: Set<string> }
+
+// canResume(mode, types) — true when the next analyze press would resume
+// a paused run instead of starting a fresh sweep
+export const canResume = (mode, types) =>
+	paused !== null &&
+	paused.mode === mode &&
+	paused.types.join(',') === [...types].join(',');
+
 // how long analyze() will wait for a crashed backend to be resurrected
 // by start.sh's supervisor before giving up
 const BACKEND_WAIT_MS = 90_000;
@@ -47,6 +59,13 @@ const waitForBackend = async (myToken) => {
 	);
 };
 
+// mark errors that mean "the backend died / is restarting" — these pause
+// the run instead of failing it
+const retryable = (err) => {
+	err.retryable = true;
+	return err;
+};
+
 // one streamed chunk: POST with stream:true, emit each validated
 // suggestion the moment its closing brace arrives. returns the count.
 const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
@@ -70,18 +89,20 @@ const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
 		});
 	} catch (err) {
 		if (err.name === 'AbortError') throw err;
-		throw new Error(
+		throw retryable(new Error(
 			`LLM backend unreachable — is it running? (${err.message})`,
 			{ cause: err }
-		);
+		));
 	}
 
 	if (!res.ok) {
 		const detail = await res.text().catch(() => '');
-		throw new Error(
+		const err = new Error(
 			`LLM backend returned ${res.status}` +
 			(detail ? ': ' + detail : '')
 		);
+		// 5xx/404 happen while the supervisor is relaunching the server
+		throw (res.status >= 500 || res.status === 404) ? retryable(err) : err;
 	}
 
 	let count = 0;
@@ -89,15 +110,23 @@ const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
 		const valid = validateItem(item, chunk.text);
 		if (valid) { count++; onSuggestion(valid); }
 	});
-	await parseSSE(res, extract);
+	try {
+		await parseSSE(res, extract);
+	} catch (err) {
+		if (err.name === 'AbortError') throw err;
+		// stream died mid-response — backend crash
+		throw retryable(err);
+	}
 	return count;
 };
 
 // analyze(doc, mode, types) — async generator
-// yields { type: 'init', total } first, then
-//   { type: 'suggestion', suggestion } as each one streams in, and
-//   { type: 'chunk', index, total, count, error } as each chunk settles.
-// throws AbortError if cancelled; throws Error on network failure.
+// yields { type: 'init', total, done } first, then
+//   { type: 'suggestion', suggestion } as each one streams in,
+//   { type: 'chunk', index, total, count, error } as each chunk settles,
+//   { type: 'notice', text } for transient status, and
+//   { type: 'paused', done, total } if the backend dies mid-run.
+// throws AbortError if cancelled; throws Error on persistent failure.
 export async function* analyze(doc, mode, types) {
 	pool.abort();
 	const myToken = ++token;
@@ -107,8 +136,17 @@ export async function* analyze(doc, mode, types) {
 
 	if (chunks.length === 0) return;
 
+	// resume a paused run: skip chunks whose text already completed
+	const doneTexts = canResume(mode, types)
+		? new Set(paused.doneTexts)
+		: new Set();
+	paused = null;
+
+	const todo  = chunks.filter(c => !doneTexts.has(c.text));
 	const total = chunks.length;
-	yield { type: 'init', total };
+	yield { type: 'init', total, done: total - todo.length };
+
+	if (todo.length === 0) return;
 
 	// pre-flight: if the backend just crashed, the supervisor is already
 	// relaunching it — wait instead of failing every chunk instantly
@@ -127,7 +165,7 @@ export async function* analyze(doc, mode, types) {
 		if (notify) { notify(); notify = null; }
 	};
 
-	const jobs = chunks.map((chunk) => (signal) =>
+	const jobs = todo.map((chunk) => (signal) =>
 		streamChunk(chunk, mode, types, signal, (suggestion) =>
 			push({ type: 'suggestion', suggestion, chunkFrom: chunk.totalFrom })));
 
@@ -140,14 +178,25 @@ export async function* analyze(doc, mode, types) {
 		{ jobs: jobs.slice(1),    offset: 1 },
 	];
 
+	let pausing = false;
+
 	(async () => {
 		for (const wave of waves) {
 			if (wave.jobs.length === 0) continue;
 			if (token !== myToken) break;
 			for await (const result of pool.runProgressive(wave.jobs)) {
 				if (result.status === 'aborted') {
-					push({ type: 'aborted' });
+					push({ type: pausing ? 'paused' : 'aborted' });
 					return;
+				}
+				if (result.status === 'rejected' && result.reason?.retryable && !pausing) {
+					// backend died — freeze the run, keep what we have
+					pausing = true;
+					pool.abort();
+					continue;
+				}
+				if (result.status === 'fulfilled') {
+					doneTexts.add(todo[result.index + wave.offset].text);
 				}
 				push({
 					type:  'chunk',
@@ -157,6 +206,7 @@ export async function* analyze(doc, mode, types) {
 					error: result.status === 'rejected'  ? result.reason : null,
 				});
 			}
+			if (pausing) { push({ type: 'paused' }); return; }
 		}
 		push({ type: 'done' });
 	})();
@@ -170,15 +220,22 @@ export async function* analyze(doc, mode, types) {
 				throw new DOMException('Aborted', 'AbortError');
 			}
 			const ev = queue.shift();
-			if (ev.type === 'done')    return;
+			if (ev.type === 'done') return;
+			if (ev.type === 'paused') {
+				paused = { mode, types: [...types], doneTexts };
+				yield { type: 'paused', done: doneTexts.size, total };
+				return;
+			}
 			if (ev.type === 'aborted') throw new DOMException('Aborted', 'AbortError');
 			yield ev;
 		}
 	}
 }
 
-// cancel the in-flight analysis (no-op if idle)
+// cancel the in-flight analysis (no-op if idle). a manual cancel discards
+// any paused-run state — the next analyze is a fresh sweep.
 export const cancelAnalysis = () => {
 	token++;
+	paused = null;
 	pool.abort();
 };

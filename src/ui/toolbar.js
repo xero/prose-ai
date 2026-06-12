@@ -2,9 +2,10 @@
 // ║   prose-ai — toolbar          ║
 // ╚═══════════════════════════════╝
 
-import { analyze, cancelAnalysis } from '../llm/client.js';
-import { mapSuggestions }          from '../diff/mapper.js';
-import { applyMappedSuggestions, clearSuggestions } from '../state/suggestions.js';
+import { analyze, cancelAnalysis, canResume } from '../llm/client.js';
+import { mapSuggestions }                     from '../diff/mapper.js';
+import { applyMappedSuggestions, clearSuggestions,
+         collectSuggestions }                 from '../state/suggestions.js';
 
 const el = {
 	btnAnalyze: document.querySelector('#btn-analyze'),
@@ -109,7 +110,9 @@ export const initToolbar = (editor) => {
 			return;
 		}
 
-		clearSuggestions(editor);
+		// a paused run (backend crash) keeps its suggestions and resumes;
+		// otherwise this is a fresh sweep
+		if (!canResume(mode, types)) clearSuggestions(editor);
 		setLoading(true);
 		setStatus('waiting for model…', 'loading');
 		analyzing = true;
@@ -117,13 +120,14 @@ export const initToolbar = (editor) => {
 		let completed = 0;
 		let total     = 0;
 		let failed    = 0;
-		let applied   = 0;
+		let pausedRun = false;
 
 		try {
 			for await (const event of analyze(doc, mode, types)) {
 				if (event.type === 'init') {
-					total = event.total;
-					setStatus(`analyzing 0/${total}…`, 'loading');
+					total     = event.total;
+					completed = event.done ?? 0;
+					setStatus(`analyzing ${completed}/${total}…`, 'loading');
 					continue;
 				}
 				if (event.type === 'notice') {
@@ -134,7 +138,6 @@ export const initToolbar = (editor) => {
 					// each suggestion lands in the editor the moment it streams in
 					const mapped = mapSuggestions(editor, [event.suggestion], event.chunkFrom);
 					applyMappedSuggestions(editor, mapped);
-					applied += mapped.length;
 					continue;
 				}
 				if (event.type === 'chunk') {
@@ -144,16 +147,26 @@ export const initToolbar = (editor) => {
 						console.warn('[prose-ai] chunk failed:', event.error);
 					}
 					setStatus(`analyzing ${completed}/${total}…`, 'loading');
+					continue;
+				}
+				if (event.type === 'paused') {
+					pausedRun = true;
+					setStatus(
+						`paused — backend down (${event.done}/${event.total} done). press analyze to resume`,
+						'warn'
+					);
 				}
 			}
 
-			const n = applied;
-			let msg = n
-				? `${n} suggestion${n === 1 ? '' : 's'} found`
-				: 'no suggestions found';
-			if (failed > 0) msg += ` (${failed} section${failed === 1 ? '' : 's'} failed)`;
-			setStatus(msg, failed > 0 ? 'warn' : '');
-			setTimeout(() => setStatus(''), 5000);
+			if (!pausedRun) {
+				const n = collectSuggestions(editor).length;
+				let msg = n
+					? `${n} suggestion${n === 1 ? '' : 's'} found`
+					: 'no suggestions found';
+				if (failed > 0) msg += ` (${failed} section${failed === 1 ? '' : 's'} failed)`;
+				setStatus(msg, failed > 0 ? 'warn' : '');
+				setTimeout(() => setStatus(''), 5000);
+			}
 
 		} catch (err) {
 			if (err.name === 'AbortError') return;
