@@ -2,9 +2,10 @@
 // ║   prose-ai — tooltip          ║
 // ╚═══════════════════════════════╝
 
-import { renderDiff }         from '../diff/render.js';
-import { setSuggestionFocus } from '../extensions/suggestion.js';
+import { renderDiff }          from '../diff/render.js';
+import { setSuggestionFocus }  from '../extensions/suggestion.js';
 import { editor as theEditor } from '../editor.js';
+import { mobile }              from './breakpoint.js';
 
 const el = {
 	wrap: document.querySelector('#tooltip'),
@@ -38,30 +39,57 @@ const reposition = (targetRect) => {
 const show = (id, type, explanation, original, replacement, targetRect) => {
 	activeId = id;
 
-	el.badge.textContent  = type;
-	el.badge.className    = `sg-badge sg-badge--${type}`;
-	el.explanation.textContent = explanation;
-	el.diff.replaceChildren(renderDiff(original, replacement));
+	// the full popup is mobile-only: on desktop the inline diff and the
+	// sidebar card already show everything it would repeat (double-click
+	// opens the mini variant instead — see showMini)
+	if (mobile.matches) {
+		el.badge.textContent  = type;
+		el.badge.className    = `sg-badge sg-badge--${type}`;
+		el.explanation.textContent = explanation;
+		el.diff.replaceChildren(renderDiff(original, replacement));
 
-	el.wrap.classList.add('visible');
+		el.wrap.classList.remove('mini');
+		el.wrap.classList.add('visible');
 
-	// reposition after paint so offsetWidth is accurate
-	requestAnimationFrame(() => reposition(targetRect));
+		// reposition after paint so offsetWidth is accurate
+		requestAnimationFrame(() => reposition(targetRect));
+	} else {
+		// a single click moves focus to another suggestion — close any
+		// mini popup so its buttons can't act on the new activeId
+		el.wrap.classList.remove('visible', 'mini');
+	}
 
 	// highlight the corresponding mark via decoration (PM redraws wipe
 	// hand-written classes inside the editor)
 	setSuggestionFocus(theEditor, id);
 
-	// highlight sidebar card
+	// highlight the sidebar card; on desktop it is the control surface
+	// (accept/reject live there), so pin it to the top of the list where
+	// the eye can find it without scanning
 	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
-	document.querySelector(`.sg-card[data-id="${id}"]`)?.classList.add('active');
+	const card = document.querySelector(`.sg-card[data-id="${id}"]`);
+	card?.classList.add('active');
+	if (!mobile.matches) card?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 };
 
 export const hide = () => {
 	activeId = null;
-	el.wrap.classList.remove('visible');
+	el.wrap.classList.remove('visible', 'mini');
 	setSuggestionFocus(theEditor, null);
 	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
+};
+
+// mini popup (desktop double-click): one row — badge, accept, reject.
+// the inline diff already shows the change, so only the actions travel
+// to the pointer
+const showMini = (id, type, targetRect) => {
+	activeId = id;
+
+	el.badge.textContent = type;
+	el.badge.className   = `sg-badge sg-badge--${type}`;
+
+	el.wrap.classList.add('visible', 'mini');
+	requestAnimationFrame(() => reposition(targetRect));
 };
 
 // showForId — called from sidebar card click
@@ -124,6 +152,26 @@ export const initTooltip = (editor) => {
 			span.getBoundingClientRect());
 	});
 
+	// double-click on a suggestion (desktop): accept/reject at the pointer
+	document.querySelector('#editor').addEventListener('dblclick', (e) => {
+		if (mobile.matches) return;
+		const span = e.target.closest('.suggestion');
+		if (!span) return;
+
+		const id   = span.dataset.suggestionId;
+		const mark = findMarkById(editor, id);
+		if (!mark) return;
+
+		// double-click word-selects, and a selection summons the synonyms
+		// bubble. PM applies that selection after this handler runs, so the
+		// collapse has to happen a tick later or it collapses nothing
+		setTimeout(() => {
+			editor.commands.setTextSelection(editor.state.selection.from);
+		}, 0);
+
+		showMini(id, mark.type, span.getBoundingClientRect());
+	});
+
 	// accept
 	el.accept.addEventListener('click', () => {
 		if (!activeId) return;
@@ -157,5 +205,11 @@ export const initTooltip = (editor) => {
 		if (!activeId) return;
 		const still = detail.suggestions.some(s => s.id === activeId);
 		if (!still) hide();
+	});
+
+	// a tooltip open while the window grows past the breakpoint would
+	// strand a popup desktop never shows — drop it, keep the highlight
+	mobile.addEventListener('change', (e) => {
+		if (!e.matches) el.wrap.classList.remove('visible');
 	});
 };

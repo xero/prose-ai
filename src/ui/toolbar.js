@@ -10,6 +10,7 @@ import { applyMappedSuggestions, clearSuggestions,
 const el = {
 	btnAnalyze: document.querySelector('#btn-analyze'),
 	btnCancel: document.querySelector('#btn-cancel'),
+	btnUndo: document.querySelector('#btn-undo'),
 	btnReflow: document.querySelector('#btn-reflow'),
 	status: document.querySelector('#toolbar-status'),
 	toggles: document.querySelectorAll('.type-toggle'),
@@ -68,6 +69,17 @@ export const initToolbar = (editor) => {
 		setLoading(false);
 		setStatus('cancelled');
 		setTimeout(() => setStatus(''), 2000);
+	});
+
+	// ── undo button ──────────────────────────────────
+	// same history step as ctrl+z, for pointer-only use; greys out when
+	// the undo stack is empty
+	el.btnUndo.disabled = true;
+	el.btnUndo.addEventListener('click', () => {
+		editor.chain().focus().undo().run();
+	});
+	editor.on('transaction', () => {
+		el.btnUndo.disabled = !editor.can().undo();
 	});
 
 	// ── reflow button ────────────────────────────────

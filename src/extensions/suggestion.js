@@ -5,6 +5,7 @@
 import { Mark, mergeAttributes }     from '@tiptap/core';
 import { Plugin, PluginKey }         from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { diffParts }                 from '../diff/render.js';
 
 // transient focus/pulse highlighting must be a ProseMirror decoration —
 // hand-written classes inside the contenteditable get wiped whenever PM
@@ -38,6 +39,59 @@ const findMarkRange = (doc, markType, id) => {
 	return from === null ? null : { from, to, mark };
 };
 
+// inline diff overlay: render each suggestion in the editor as the same
+// changeset the sidebar shows. the DOCUMENT keeps only the original text —
+// deletions are inline decorations over chars that already exist, and
+// insertions are widget decorations (visual-only). so copy/paste yields
+// clean original text, reject is just mark removal, and accept replaces
+// text exactly as before.
+const buildDiffDecorations = (doc, markType) => {
+	// accumulate each mark's full original across formatting-split segments
+	const byId = new Map();  // id → { start, text, attrs }
+	doc.descendants((node, pos) => {
+		if (!node.isText) return;
+		const m = node.marks.find(m => m.type === markType);
+		if (!m) return;
+		const entry = byId.get(m.attrs.id);
+		if (entry) entry.text += node.text;
+		else byId.set(m.attrs.id, { start: pos, text: node.text, attrs: m.attrs });
+	});
+
+	const decos = [];
+	for (const { start, text, attrs } of byId.values()) {
+		let offset = 0;
+		for (const part of diffParts(text, attrs.replacement)) {
+			if (part.op === 'eq') {
+				offset += part.text.length;
+				continue;
+			}
+			if (part.op === 'del') {
+				decos.push(Decoration.inline(
+					start + offset, start + offset + part.text.length,
+					{ class: 'diff-del' }
+				));
+				offset += part.text.length;
+				continue;
+			}
+			// ins — the text exists only in this widget. it carries the
+			// suggestion id and class so the tooltip click handler treats it
+			// like any other part of the mark
+			const at = start + offset;
+			const insText = part.text;
+			decos.push(Decoration.widget(at, () => {
+				const span = document.createElement('span');
+				span.className = 'suggestion diff-ins';
+				span.dataset.suggestionId = attrs.id;
+				span.textContent = insText;
+				return span;
+			}, { side: 1, key: `${attrs.id}:${at}:${insText}` }));
+		}
+	}
+	return decos;
+};
+
+export const suggestionDiffKey = new PluginKey('suggestion-diff');
+
 export const SuggestionMark = Mark.create({
 	name: 'suggestion',
 	priority: 1000,  // render above most other marks
@@ -70,6 +124,24 @@ export const SuggestionMark = Mark.create({
 	addProseMirrorPlugins() {
 		const markType = this.type;
 		return [
+			new Plugin({
+				key: suggestionDiffKey,
+				state: {
+					init: (_, state) =>
+						DecorationSet.create(state.doc, buildDiffDecorations(state.doc, markType)),
+					// marks only change via doc-changing transactions, so
+					// metadata-only dispatches (focus, pulse) reuse the set
+					apply: (tr, prev, _old, state) =>
+						tr.docChanged
+							? DecorationSet.create(state.doc, buildDiffDecorations(state.doc, markType))
+							: prev,
+				},
+				props: {
+					decorations(state) {
+						return suggestionDiffKey.getState(state);
+					},
+				},
+			}),
 			new Plugin({
 				key: suggestionFocusKey,
 				state: {

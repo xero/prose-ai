@@ -7,7 +7,7 @@
 // open. desktop layout is untouched — every handler gates on the
 // same breakpoint the stylesheet uses.
 
-const mq = window.matchMedia('(width < 768px)');
+import { mobile as mq } from './breakpoint.js';
 
 // below this much finger travel a press is a tap (toggle), above it a
 // drag — too low and natural finger wobble defeats tapping, too high and
