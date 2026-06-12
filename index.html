@@ -316,6 +316,41 @@
 			flex-direction: column;
 			overflow: hidden;
 			background: var(--bg-surface);
+			position: relative;
+		}
+
+		/* drag handle on the sidebar's left edge */
+		#sidebar-resizer {
+			position: absolute;
+			top: 0;
+			left: -3px;
+			width: 7px;
+			height: 100%;
+			cursor: col-resize;
+			z-index: 20;
+			touch-action: none;
+
+			&::after {
+				content: "";
+				position: absolute;
+				top: 0;
+				left: 3px;
+				width: 1px;
+				height: 100%;
+				background: transparent;
+				transition: background 0.15s;
+			}
+
+			&:hover::after,
+			&.dragging::after {
+				background: var(--accent-dim);
+			}
+		}
+
+		/* no text selection or editor cursor while dragging */
+		body.resizing {
+			cursor: col-resize;
+			user-select: none;
 		}
 
 		#sidebar-header {
@@ -648,6 +683,7 @@
 
 	<!-- sidebar -->
 	<aside id="sidebar">
+		<div id="sidebar-resizer"></div>
 		<div id="sidebar-header">
 			<h2>Suggestions</h2>
 			<span id="suggestion-count">0</span>
