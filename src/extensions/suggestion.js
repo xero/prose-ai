@@ -170,7 +170,9 @@ export const SuggestionMark = Mark.create({
 
 	addCommands() {
 		const markType = this.type;  // capture outside command closures
-		return {
+		// custom command names need tiptap's RawCommands module augmentation,
+		// which only exists in typescript — cast for js consumers
+		return /** @type {any} */ ({
 			// replace marked text with the suggestion replacement, remove mark
 			acceptSuggestion: (id) => ({ state, dispatch }) => {
 				const found = findMarkRange(state.doc, markType, id);
@@ -208,6 +210,6 @@ export const SuggestionMark = Mark.create({
 				}
 				return true;
 			},
-		};
+		});
 	},
 });

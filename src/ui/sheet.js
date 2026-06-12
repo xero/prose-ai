@@ -19,12 +19,13 @@ const PEEK_TAP_SLOP = 6;
 const SNAP_DISTANCE = 40;
 
 export const initSheet = () => {
-	const sheet  = document.querySelector('#sidebar');
-	const header = document.querySelector('#sidebar-header');
-	const list   = document.querySelector('#sidebar-list');
+	const sheet  = /** @type {HTMLElement} */ (document.querySelector('#sidebar'));
+	const header = /** @type {HTMLElement} */ (document.querySelector('#sidebar-header'));
+	const list   = /** @type {HTMLElement} */ (document.querySelector('#sidebar-list'));
 
 	// peek only when there is something to triage
-	document.addEventListener('suggestions:changed', ({ detail }) => {
+	document.addEventListener('suggestions:changed', (e) => {
+		const { detail } = /** @type {CustomEvent} */ (e);
 		const hasItems = detail.suggestions.length > 0;
 		sheet.classList.toggle('has-items', hasItems);
 		if (!hasItems) sheet.classList.remove('open');
@@ -78,8 +79,9 @@ export const initSheet = () => {
 	// picking a card closes the sheet so the editor + tooltip show;
 	// the card's accept/reject buttons keep it open for rapid triage
 	list.addEventListener('click', (e) => {
+		const target = /** @type {HTMLElement} */ (e.target);
 		if (!mq.matches) return;
-		if (e.target.closest('[data-action]')) return;
-		if (e.target.closest('.sg-card')) sheet.classList.remove('open');
+		if (target.closest('[data-action]')) return;
+		if (target.closest('.sg-card')) sheet.classList.remove('open');
 	});
 };

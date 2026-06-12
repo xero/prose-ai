@@ -129,6 +129,17 @@ const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
 	return count;
 };
 
+/**
+ * @typedef {{ original: string, replacement: string, type: string, explanation: string }} Suggestion
+ * @typedef {(
+ *   { type: 'init', total: number, done: number } |
+ *   { type: 'notice', text: ?string } |
+ *   { type: 'suggestion', suggestion: Suggestion, chunkFrom: number } |
+ *   { type: 'chunk', index: number, total: number, count: number, error: ?Error } |
+ *   { type: 'paused', done: number, total: number }
+ * )} AnalyzeEvent
+ */
+
 // analyze(doc, mode, types) — async generator
 // yields { type: 'init', total, done } first, then
 //   { type: 'suggestion', suggestion } as each one streams in,
@@ -136,6 +147,7 @@ const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
 //   { type: 'notice', text } for transient status, and
 //   { type: 'paused', done, total } if the backend dies mid-run.
 // throws AbortError if cancelled; throws Error on persistent failure.
+/** @returns {AsyncGenerator<AnalyzeEvent>} */
 export async function* analyze(doc, mode, types) {
 	pool.abort();
 	const myToken = ++token;

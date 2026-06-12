@@ -14,7 +14,7 @@ const clamp = (px) => Math.max(MIN, Math.min(maxWidth(), px));
 const setWidth = (px) => root.style.setProperty('--sidebar', `${px}px`);
 
 export const initResizer = () => {
-	const handle = document.querySelector('#sidebar-resizer');
+	const handle = /** @type {HTMLElement} */ (document.querySelector('#sidebar-resizer'));
 
 	// restore persisted width
 	const saved = Number(localStorage.getItem(STORAGE_KEY));

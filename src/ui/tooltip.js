@@ -8,12 +8,12 @@ import { editor as theEditor } from '../editor.js';
 import { mobile }              from './breakpoint.js';
 
 const el = {
-	wrap: document.querySelector('#tooltip'),
-	badge: document.querySelector('#tooltip-badge'),
-	explanation: document.querySelector('#tooltip-explanation'),
-	diff: document.querySelector('#tooltip-diff'),
-	accept: document.querySelector('#tooltip-accept'),
-	reject: document.querySelector('#tooltip-reject'),
+	wrap: /** @type {HTMLElement} */ (document.querySelector('#tooltip')),
+	badge: /** @type {HTMLElement} */ (document.querySelector('#tooltip-badge')),
+	explanation: /** @type {HTMLElement} */ (document.querySelector('#tooltip-explanation')),
+	diff: /** @type {HTMLElement} */ (document.querySelector('#tooltip-diff')),
+	accept: /** @type {HTMLButtonElement} */ (document.querySelector('#tooltip-accept')),
+	reject: /** @type {HTMLButtonElement} */ (document.querySelector('#tooltip-reject')),
 };
 
 let activeId = null;
@@ -116,6 +116,7 @@ export const showForId = (id, editor) => {
 // a mark spanning a formatting boundary lives in several text nodes —
 // accumulate the original across all of them
 const findMarkById = (editor, id) => {
+	/** @type {?{ type: string, replacement: string, explanation: string }} */
 	let attrs = null;
 	let original = '';
 	editor.state.doc.descendants((node) => {
@@ -139,7 +140,8 @@ const findMarkById = (editor, id) => {
 export const initTooltip = (editor) => {
 	// click on a suggestion mark in the editor
 	document.querySelector('#editor').addEventListener('click', (e) => {
-		const span = e.target.closest('.suggestion');
+		const span = /** @type {?HTMLElement} */ (
+			/** @type {HTMLElement} */ (e.target).closest('.suggestion'));
 		if (!span) {
 			hide(); return;
 		}
@@ -155,7 +157,8 @@ export const initTooltip = (editor) => {
 	// double-click on a suggestion (desktop): accept/reject at the pointer
 	document.querySelector('#editor').addEventListener('dblclick', (e) => {
 		if (mobile.matches) return;
-		const span = e.target.closest('.suggestion');
+		const span = /** @type {?HTMLElement} */ (
+			/** @type {HTMLElement} */ (e.target).closest('.suggestion'));
 		if (!span) return;
 
 		const id   = span.dataset.suggestionId;
@@ -188,10 +191,11 @@ export const initTooltip = (editor) => {
 
 	// dismiss on outside click
 	document.addEventListener('click', (e) => {
+		const target = /** @type {HTMLElement} */ (e.target);
 		if (!el.wrap.classList.contains('visible')) return;
-		if (el.wrap.contains(e.target)) return;
-		if (e.target.closest('.suggestion')) return;
-		if (e.target.closest('.sg-card')) return;
+		if (el.wrap.contains(target)) return;
+		if (target.closest('.suggestion')) return;
+		if (target.closest('.sg-card')) return;
 		hide();
 	});
 
@@ -201,7 +205,8 @@ export const initTooltip = (editor) => {
 	});
 
 	// hide when suggestions are cleared (e.g. re-analyze)
-	document.addEventListener('suggestions:changed', ({ detail }) => {
+	document.addEventListener('suggestions:changed', (e) => {
+		const { detail } = /** @type {CustomEvent} */ (e);
 		if (!activeId) return;
 		const still = detail.suggestions.some(s => s.id === activeId);
 		if (!still) hide();

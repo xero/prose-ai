@@ -6,9 +6,9 @@ import { showForId }  from './tooltip.js';
 import { renderDiff } from '../diff/render.js';
 
 const el = {
-	list: document.querySelector('#sidebar-list'),
-	empty: document.querySelector('#sidebar-empty'),
-	count: document.querySelector('#suggestion-count'),
+	list: /** @type {HTMLElement} */ (document.querySelector('#sidebar-list')),
+	empty: /** @type {HTMLElement} */ (document.querySelector('#sidebar-empty')),
+	count: /** @type {HTMLElement} */ (document.querySelector('#suggestion-count')),
 };
 
 const TYPE_LABELS = {
@@ -41,7 +41,7 @@ const renderCard = (s, editor) => {
 
 	// click card body → scroll + open tooltip
 	card.addEventListener('click', (e) => {
-		if (e.target.closest('[data-action]')) return;  // handled below
+		if (/** @type {HTMLElement} */ (e.target).closest('[data-action]')) return;  // handled below
 		showForId(s.id, editor);
 	});
 
@@ -89,7 +89,7 @@ export const initSidebar = (editor) => {
 	render([], editor);
 
 	// re-render whenever suggestions change
-	document.addEventListener('suggestions:changed', ({ detail }) => {
-		render(detail.suggestions, editor);
+	document.addEventListener('suggestions:changed', (e) => {
+		render(/** @type {CustomEvent} */ (e).detail.suggestions, editor);
 	});
 };

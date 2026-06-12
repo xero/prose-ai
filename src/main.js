@@ -30,4 +30,4 @@ notifySuggestions(editor);
 
 // exposed for browser-automation debugging (playwright drives accept/reject
 // and inspects marks through this)
-window.__editor = editor;
+/** @type {any} */ (window).__editor = editor;

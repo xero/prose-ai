@@ -8,21 +8,21 @@ import { applyMappedSuggestions, clearSuggestions,
 	collectSuggestions }                 from '../state/suggestions.js';
 
 const el = {
-	btnAnalyze: document.querySelector('#btn-analyze'),
-	btnCancel: document.querySelector('#btn-cancel'),
-	btnUndo: document.querySelector('#btn-undo'),
-	btnReflow: document.querySelector('#btn-reflow'),
-	status: document.querySelector('#toolbar-status'),
-	toggles: document.querySelectorAll('.type-toggle'),
+	btnAnalyze: /** @type {HTMLButtonElement} */ (document.querySelector('#btn-analyze')),
+	btnCancel: /** @type {HTMLButtonElement} */ (document.querySelector('#btn-cancel')),
+	btnUndo: /** @type {HTMLButtonElement} */ (document.querySelector('#btn-undo')),
+	btnReflow: /** @type {HTMLButtonElement} */ (document.querySelector('#btn-reflow')),
+	status: /** @type {HTMLElement} */ (document.querySelector('#toolbar-status')),
+	toggles: /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.type-toggle')),
 };
 
 const getActiveMode = () =>
-	document.querySelector('.mode-btn.active')?.dataset.mode ?? 'proofread';
+	/** @type {?HTMLElement} */ (document.querySelector('.mode-btn.active'))?.dataset.mode ?? 'proofread';
 
 // read checked types from the toolbar checkboxes
 const getActiveTypes = () =>
 	Array.from(el.toggles)
-		.filter(t => t.querySelector('input').checked)
+		.filter(t => /** @type {HTMLInputElement} */ (t.querySelector('input')).checked)
 		.map(t => t.dataset.type);
 
 const setLoading = (on) => {
@@ -43,7 +43,7 @@ export const initToolbar = (editor) => {
 	let analyzing = false;
 
 	// ── mode selector ────────────────────────────────────
-	document.querySelectorAll('.mode-btn').forEach(btn => {
+	/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.mode-btn')).forEach(btn => {
 		btn.addEventListener('click', () => {
 			document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
 			btn.classList.add('active');
