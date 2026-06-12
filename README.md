@@ -1,81 +1,90 @@
 # prose-ai
 
-A local, offline prose editor powered by a language model running on your own machine. Paste or write text, pick an editorial mode, and get inline tracked changes you can accept or reject one by one. No cloud, no subscription, no data leaving your machine.
+> [!NOTE]
+> A local, offline prose editor powered by a language model running on your own machine. Paste or write text, pick an editorial mode, and triage inline tracked changes as they stream in. No cloud, no subscription, no data leaving your machine.
 
-Modes: **Proofread** · **Rewrite** · **Formalize** · **Concise**
+---
 
-Highlight any word or phrase to get contextual **synonyms** via a bubble menu.
+## Features
 
->[!NOTE]
-> Editorial defaults (Oxford commas, em-dash handling, sentence capitalization, etc.)
-> are defined in [`src/llm/prompt.js`](./src/llm/prompt.js) in the `SHARED_RULES` section. Adjust them to
-> match your own style guide.
+**Four editorial modes.** Proofread, Rewrite, Formalize, and Concise. Proofread lets you toggle the suggestion types you care about (grammar, vocabulary, clarity, tone).
+
+**Streaming suggestions.** prose-ai splits the document into paragraph chunks and analyzes them concurrently. Each suggestion lands in the editor the moment the model finishes writing it; the first underline appears in seconds while the rest of the document is still processing. Triage from the start, no waiting for the full run.
+
+**Inline diffs.** The tooltip and sidebar render each suggestion as a single inline run: unchanged context plain, deletions struck out, insertions highlighted. Sub-word edits expand to whole words; punctuation-only edits stay surgical.
+
+**Context-aware chunks.** Each chunk carries the preceding paragraphs as read-only context, so a pronoun whose antecedent lives in the previous paragraph is not flagged as unclear.
+
+**Synonyms.** Highlight any word or phrase for contextual alternatives via the bubble menu.
+
+**Crash recovery.** If the backend dies mid-run (Metal under memory pressure aborts the whole process), the run pauses with its suggestions intact and the status shows what completed. Press analyze to resume the unfinished chunks; the supervisor in `start.sh` restarts the server automatically.
+
+**Small screens.** Below 768px the sidebar becomes a bottom sheet that peeks in when suggestions exist. On desktop, drag the sidebar edge to resize it.
+
+> [!NOTE]
+> Editorial defaults (Oxford commas, em-dash handling, minimal suggestion spans, etc.) live in [`src/llm/prompt.js`](./src/llm/prompt.js) in the `SHARED_RULES` section. Adjust them to match your own style guide.
 
 ---
 
 ## What runs it
 
-- **[Ollama](https://ollama.com)** — runs the language model locally
-- **[gemma3:4b](https://ollama.com/library/gemma3)** — Google's 4B model, fast on Apple Silicon and modern CPUs
-  Model and chunking configuration lives in [`src/llm/config.js`](./src/llm/config.js).
-- **[Bun](https://bun.sh)** — JS runtime and package manager
-- **[Vite](https://vite.dev)** — dev server and bundler
-- **[Tiptap](https://tiptap.dev)** — rich text editor (MIT, open source)
+- **[Rapid-MLX](https://github.com/raullenchai/Rapid-MLX)** serves the language model on Apple Silicon with an OpenAI-compatible API
+- **qwen3.5-4b-4bit** is the default model; it won the speed/quality bake-off on a base M4 (see [`benchmarks/`](./benchmarks/)). The model ladder and all tuning constants live in [`src/llm/config.js`](./src/llm/config.js)
+- **[Bun](https://bun.sh)** as the JS runtime and package manager
+- **[Vite](https://vite.dev)** as the dev server and bundler
+- **[Tiptap](https://tiptap.dev)** as the rich text editor
+
+The frontend speaks plain OpenAI chat completions, so any compatible backend works; point `BACKEND_URL` in [`src/llm/config.js`](./src/llm/config.js) at Ollama, LM Studio, or anything else. Rapid-MLX is the default because it is the fastest option tested on Apple Silicon, and the qwen3.5 family needs its `chat_template_kwargs` support to disable thinking mode.
+
+> [!IMPORTANT]
+> Rapid-MLX requires Apple Silicon. On other platforms, install an OpenAI-compatible backend of your choice and update `BACKEND_URL` and `MODEL` in the config.
 
 ---
 
-## Install Ollama
+## Install Rapid-MLX
 
-### macOS (Homebrew)
 ```bash
-brew install ollama
+curl -fsSL https://raullenchai.github.io/Rapid-MLX/install.sh | bash
 ```
 
-### macOS (direct)
-Download from [ollama.com/download](https://ollama.com/download) and run the installer.
+The first analyze downloads the model (~2.4 GB) automatically. To pre-pull it instead:
 
-### Linux
 ```bash
-curl -fsSL https://ollama.com/install.sh | sh
+rapid-mlx pull qwen3.5-4b-4bit
 ```
-
-### Windows
-Download the installer from [ollama.com/download](https://ollama.com/download).
 
 ---
 
-## Start Ollama and pull the model
-
-```bash
-# start the ollama server
-ollama serve &> /tmp/ollama.log &
-
-# pull the model (~3.3 GB)
-ollama pull gemma3:4b
-
-# warm it into memory (optional — skips cold-load delay on first use)
-ollama run gemma3:4b "" &> /dev/null &
-```
-
->[!TIP]
-> If you use the **Ollama macOS menu bar app**, it handles `ollama serve` automatically, so you can skip that step.
-
----
-
-## Install and run prose-ai
+## Run prose-ai
 
 ```bash
 # install dependencies
 bun i
 
-# build
-bun run build
-
-# start the dev server
-bun run dev
+# start everything: supervised model server + dev server
+./start.sh
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
+
+`start.sh` health-checks the backend, launches it under a supervisor loop if needed (auto-restart on crash), warms the model, and starts Vite. The served model name comes from the [`.model`](./.model) file; keep it in sync with `MODEL` in the config.
+
+---
+
+## Benchmarks and tests
+
+```bash
+# unit tests
+bun test
+
+# chunked pipeline benchmark against the current backend
+./bench.sh
+
+# chunk-budget × concurrency parameter sweep
+./bench.sh --sweep --quick
+```
+
+Results land in [`benchmarks/`](./benchmarks/) alongside the historical runs that picked the current model and tuning.
 
 ---
 
@@ -83,4 +92,4 @@ Open [http://localhost:5173](http://localhost:5173).
 
 by [xero](https://x-e.ro) & [claude code](https://claude.ai)
 
-[CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) — public domain, no rights reserved.
+[CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/). Public domain, no rights reserved.
