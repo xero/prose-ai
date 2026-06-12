@@ -96,6 +96,7 @@
 	--diff-del-bg:     var(--light-del-bg);
 	--diff-ins:        var(--light-ins);
 	--diff-ins-bg:     var(--light-ins-bg);
+	--pulse:           var(--dark-amber);
 
 	/* theme-independent */
 	--font-prose: 'Lora', Georgia, serif;
@@ -112,6 +113,42 @@
 	--ease-elastic-2: cubic-bezier(0.5, 1, 0.75, 1.25);
 }
 @theme {
+	/* px-true scale — the design is pixel-based on a 13px root, so the rem
+	   defaults are useless here; numeric utilities read as raw pixels:
+	   p-4 = 4px, gap-16 = 16px, max-w-680 = 680px */
+	--spacing: 1px;
+
+	/* type ramp — replaces the rem defaults and their line-height companions */
+	--text-*: initial;
+	--text-3xs:  9px;
+	--text-2xs:  10px;
+	--text-xs:   11px;
+	--text-sm:   12px;
+	--text-base: 13px;
+	--text-lg:   16px;
+	--text-xl:   18px;
+	--text-2xl:  28px;
+
+	--leading-normal:  1.5;
+	--leading-relaxed: 1.6;
+	--leading-loose:   1.7;
+	--leading-prose:   1.75;
+
+	--tracking-btn:   0.08em;
+	--tracking-badge: 0.12em;
+	--tracking-caps:  0.15em;
+
+	--radius-xs:   2px;
+	--radius-sm:   3px;
+	--radius-base: var(--radius);
+
+	--shadow-pop:   0 8px 24px var(--shadow);
+	--shadow-sheet: 0 -8px 24px var(--shadow);
+
+	/* the plain `transition: x 0.12s` shorthands this replaces eased with
+	   the `ease` keyword — keep that feel instead of tailwind's default */
+	--default-transition-timing-function: ease;
+
 	--color-bg: var(--bg);
 	--color-surface: var(--bg-surface);
 	--color-raised: var(--bg-raised);
@@ -123,16 +160,23 @@
 	--color-fg-dim: var(--text-dim);
 	--color-accent: var(--accent);
 	--color-accent-dim: var(--accent-dim);
+	--color-accent-bg: var(--accent-bg);
 	--color-accent-contrast: var(--accent-contrast);
 	--color-grammar: var(--sg-grammar);
+	--color-grammar-bg: var(--sg-grammar-bg);
 	--color-vocab: var(--sg-vocab);
+	--color-vocab-bg: var(--sg-vocab-bg);
 	--color-clarity: var(--sg-clarity);
+	--color-clarity-bg: var(--sg-clarity-bg);
 	--color-tone: var(--sg-tone);
+	--color-tone-bg: var(--sg-tone-bg);
 	--color-del: var(--diff-del);
+	--color-del-bg: var(--diff-del-bg);
 	--color-ins: var(--diff-ins);
+	--color-ins-bg: var(--diff-ins-bg);
+	--color-pulse: var(--pulse);
 	--font-prose: var(--font-prose);
 	--font-ui: var(--font-ui);
-	--radius-base: var(--radius);
 }
 .dark {
 	--bg:              var(--dark-bg);
@@ -162,36 +206,40 @@
 	--diff-del-bg:     var(--dark-del-bg);
 	--diff-ins:        var(--dark-ins);
 	--diff-ins-bg:     var(--dark-ins-bg);
+	--pulse:           var(--light-amber);
 }
 /* <--//-----------------------------------------------------------[utility] */
 
 /* floating panel chrome shared by tooltip, bubble menu, and picklist */
 @utility popup-chrome {
-	background: var(--bg-raised);
-	border: 1px solid var(--border-mid);
-	border-radius: var(--radius);
-	box-shadow: 0 8px 24px var(--shadow);
+	@apply
+		bg-raised
+		border
+		border-line-mid
+		rounded-base
+		shadow-pop;
 }
 
 /* <--//--------------------------------------------------------------[base] */
 @layer base {
 	/* ── reset ─────────────────────────────────────────── */
-	*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+	*, *::before, *::after { @apply box-border m-0 p-0; }
 
 	/* ── base ──────────────────────────────────────────── */
 	html, body {
-		height: 100%;
-		background: var(--bg);
-		color: var(--text);
-		font-family: var(--font-ui);
-		font-size: 13px;
-		line-height: 1.5;
-		-webkit-font-smoothing: antialiased;
+		@apply
+			h-full
+			bg-bg
+			text-fg
+			font-ui
+			text-base
+			leading-normal
+			antialiased;
 	}
 
 	/* ── layout ────────────────────────────────────────── */
 	#app {
-		display: grid;
+		@apply grid overflow-hidden;
 		grid-template-rows: auto 1fr;
 		grid-template-columns: 1fr var(--sidebar);
 		grid-template-areas:
@@ -199,185 +247,213 @@
 			"editor  sidebar";
 		height: 100vh;
 		height: 100dvh;
-		overflow: hidden;
 	}
 
 	/* ── toolbar ───────────────────────────────────────── */
 	#toolbar {
+		@apply
+			relative
+			z-10
+			flex
+			items-center
+			gap-16
+			px-20
+			bg-surface
+			border-b
+			border-line;
 		grid-area: toolbar;
-		display: flex;
-		align-items: center;
-		gap: 16px;
 		min-height: var(--toolbar);
-		padding: 0 20px;
-		background: var(--bg-surface);
-		border-bottom: 1px solid var(--border);
-		position: relative;
-		z-index: 10;
 	}
 
 	#toolbar .wordmark {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 0.15em;
-		text-transform: uppercase;
-		color: var(--accent);
-		margin-right: 8px;
+		@apply
+			font-ui
+			text-xs
+			font-medium
+			tracking-caps
+			uppercase
+			text-accent
+			mr-8;
 	}
 
 	#toolbar .divider {
-		width: 1px;
-		height: 20px;
-		background: var(--border-mid);
+		@apply
+			w-px
+			h-20
+			bg-line-mid;
 	}
 
 	/* mode selector */
 	.mode-selector {
-		display: flex;
-		gap: 2px;
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 2px;
+		@apply
+			flex
+			gap-2
+			bg-bg
+			border
+			border-line
+			rounded-base
+			p-2;
 	}
 	.mode-btn {
-		padding: 4px 10px;
-		border: none;
-		border-radius: 3px;
-		background: transparent;
-		color: var(--text-mid);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		cursor: pointer;
-		transition: all 0.12s;
-		white-space: nowrap;
-	}
-	.mode-btn:hover { color: var(--text); background: var(--bg-hover); }
-	.mode-btn.active {
-		background: var(--bg-raised);
-		color: var(--text);
-		border: 1px solid var(--border-mid);
+		@apply
+			py-4
+			px-10
+			border-none
+			rounded-sm
+			bg-transparent
+			text-fg-mid
+			font-ui
+			text-xs
+			cursor-pointer
+			transition-all
+			duration-120
+			whitespace-nowrap;
+
+		&:hover { @apply text-fg bg-hover; }
+
+		&.active {
+			@apply
+				bg-raised
+				text-fg
+				border
+				border-solid
+				border-line-mid;
+		}
 	}
 
 	/* type toggles slide in/out — only visible in proofread mode */
 	#type-toggles {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		overflow: hidden;
-		max-width: 0;
-		opacity: 0;
+		@apply
+			flex
+			items-center
+			gap-6
+			overflow-hidden
+			max-w-0
+			opacity-0;
 		transition: max-width 0.2s ease, opacity 0.15s ease;
-	}
-	#type-toggles.visible {
-		max-width: 400px;
-		opacity: 1;
+
+		&.visible { @apply max-w-400 opacity-100; }
 	}
 
 	.type-toggle {
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		padding: 4px 8px;
-		border-radius: var(--radius);
-		border: 1px solid var(--border);
-		background: transparent;
-		color: var(--text-mid);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		cursor: pointer;
-		transition: all 0.15s;
-		user-select: none;
+		@apply
+			flex
+			items-center
+			gap-5
+			py-4
+			px-8
+			rounded-base
+			border
+			border-line
+			bg-transparent
+			text-fg-mid
+			font-ui
+			text-xs
+			cursor-pointer
+			transition-all
+			duration-150
+			select-none;
+
+		input[type="checkbox"] { @apply hidden; }
+
+		.dot {
+			@apply
+				size-5
+				rounded-full
+				bg-current
+				opacity-70;
+		}
 	}
 
-	.type-toggle input[type="checkbox"] { display: none; }
-
-	.type-toggle.active { color: var(--text); border-color: var(--border-mid); background: var(--bg-raised); }
-	.type-toggle[data-type="grammar"].active  { border-color: var(--sg-grammar); color: var(--sg-grammar); background: var(--sg-grammar-bg); }
-	.type-toggle[data-type="vocabulary"].active { border-color: var(--sg-vocab); color: var(--sg-vocab); background: var(--sg-vocab-bg); }
-	.type-toggle[data-type="clarity"].active  { border-color: var(--sg-clarity); color: var(--sg-clarity); background: var(--sg-clarity-bg); }
-	.type-toggle[data-type="tone"].active     { border-color: var(--sg-tone); color: var(--sg-tone); background: var(--sg-tone-bg); }
-	.type-toggle .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+	.type-toggle.active { @apply text-fg border-line-mid bg-raised; }
+	.type-toggle[data-type="grammar"].active    { @apply border-grammar text-grammar bg-grammar-bg; }
+	.type-toggle[data-type="vocabulary"].active { @apply border-vocab text-vocab bg-vocab-bg; }
+	.type-toggle[data-type="clarity"].active    { @apply border-clarity text-clarity bg-clarity-bg; }
+	.type-toggle[data-type="tone"].active       { @apply border-tone text-tone bg-tone-bg; }
 
 	/* analyze button */
-	#toolbar .spacer { flex: 1; }
+	#toolbar .spacer { @apply flex-1; }
 
 	#btn-analyze {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 7px 16px;
-		background: var(--accent);
-		color: var(--accent-contrast);
-		border: none;
-		border-radius: var(--radius);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		cursor: pointer;
+		@apply
+			flex
+			items-center
+			gap-8
+			py-7
+			px-16
+			bg-accent
+			text-accent-contrast
+			border-none
+			rounded-base
+			font-ui
+			text-xs
+			font-medium
+			tracking-btn
+			uppercase
+			cursor-pointer;
 		transition: opacity 0.15s, transform 0.1s;
+
+		&:hover { @apply opacity-88; }
+		&:active { transform: scale(0.97); }
+		&:disabled {
+			@apply opacity-35 cursor-not-allowed;
+			transform: none;
+		}
 	}
-	#btn-analyze:hover { opacity: 0.88; }
-	#btn-analyze:active { transform: scale(0.97); }
-	#btn-analyze:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
 	#btn-cancel {
-		display: none;
-		padding: 7px 12px;
-		background: transparent;
-		color: var(--text-mid);
-		border: 1px solid var(--border-mid);
-		border-radius: var(--radius);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		cursor: pointer;
-		transition: color 0.15s, border-color 0.15s;
+		@apply
+			hidden
+			py-7
+			px-12
+			bg-transparent
+			text-fg-mid
+			border
+			border-line-mid
+			rounded-base
+			font-ui
+			text-xs
+			cursor-pointer
+			transition-colors
+			duration-150;
+
+		&:hover { @apply text-fg border-line-mid; }
+		&.visible { @apply block; }
 	}
-	#btn-cancel:hover { color: var(--text); border-color: var(--border-mid); }
-	#btn-cancel.visible { display: block; }
 
 	#btn-undo,
 	#btn-reflow {
-		padding: 7px 12px;
-		background: transparent;
-		color: var(--text-dim);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		cursor: pointer;
-		transition: color 0.15s, border-color 0.15s;
-	}
-	#btn-undo:hover,
-	#btn-reflow:hover {
-		color: var(--text);
-		border-color: var(--border-mid);
-	}
-	#btn-undo:active,
-	#btn-reflow:active {
-		transform: scale(0.97);
-	}
-	#btn-undo:disabled,
-	#btn-reflow:disabled {
-		opacity: 0.35;
-		cursor: not-allowed;
-		transform: none;
+		@apply
+			py-7
+			px-12
+			bg-transparent
+			text-fg-dim
+			border
+			border-line
+			rounded-base
+			font-ui
+			text-xs
+			cursor-pointer
+			transition-colors
+			duration-150;
+
+		&:hover { @apply text-fg border-line-mid; }
+		&:active { transform: scale(0.97); }
+		&:disabled {
+			@apply opacity-35 cursor-not-allowed;
+			transform: none;
+		}
 	}
 
 	/* an armed undo pops in accent amber — the shared muted style above
 	   reads as disabled even when it is not */
 	#btn-undo:enabled {
-		color: var(--accent);
-		border-color: var(--accent-dim);
-		background: var(--accent-bg);
+		@apply
+			text-accent
+			border-accent-dim
+			bg-accent-bg;
 	}
-	#btn-undo:enabled:hover {
-		color: var(--accent);
-		border-color: var(--accent);
-	}
+	#btn-undo:enabled:hover { @apply text-accent border-accent; }
 
 	/* slow cross-fade while the theme flips — scoped to a transient class
 	   (set by theme.js for the duration of the fade) so hovers, drags, and
@@ -394,26 +470,27 @@
 
 	/* darkmode toggle — masked sun/moon morph (lifted from text0wnz) */
 	#btn-theme {
-		@apply cursor-pointer;
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 4px;
-		border: none;
-		background: transparent;
+		@apply
+			flex
+			items-center
+			gap-6
+			p-4
+			border-none
+			bg-transparent
+			cursor-pointer
+			touch-manipulation;
 		-webkit-tap-highlight-color: transparent;
-		touch-action: manipulation;
 
 		svg {
-			width: 20px;
-			height: 20px;
+			@apply size-20;
 			stroke-linecap: round;
 		}
 
 		kbd {
-			font-family: var(--font-ui);
-			font-size: 10px;
-			color: var(--text-dim);
+			@apply
+				font-ui
+				text-2xs
+				text-fg-dim;
 		}
 	}
 
@@ -490,66 +567,79 @@
 
 	/* status message */
 	#toolbar-status {
-		font-size: 11px;
-		color: var(--text-dim);
-		min-width: 120px;
+		@apply
+			text-xs
+			text-fg-dim
+			min-w-120;
 	}
-	#toolbar-status.loading { color: var(--accent-dim); }
-	#toolbar-status.error   { color: var(--sg-grammar); }
-	#toolbar-status.warn    { color: var(--sg-clarity); }
+	#toolbar-status.loading { @apply text-accent-dim; }
+	#toolbar-status.error   { @apply text-grammar; }
+	#toolbar-status.warn    { @apply text-clarity; }
 
 	/* ── editor pane ───────────────────────────────────── */
 	#editor-wrap {
+		@apply
+			overflow-y-auto
+			pt-60
+			px-80
+			pb-120
+			border-r
+			border-line;
 		grid-area: editor;
-		overflow-y: auto;
-		padding: 60px 80px 120px;
-		border-right: 1px solid var(--border);
 	}
 
 	/* tiptap mounts here */
 	#editor {
-		max-width: 680px;
-		margin: 0 auto;
-		outline: none;
+		@apply
+			max-w-680
+			mx-auto
+			outline-none;
 	}
 
 	/* prose typography */
 	.ProseMirror {
-		font-family: var(--font-prose);
-		font-size: 18px;
-		line-height: 1.75;
-		color: var(--text);
-		outline: none;
-		caret-color: var(--accent);
-	}
+		@apply
+			font-prose
+			text-xl
+			leading-prose
+			text-fg
+			outline-none
+			caret-accent;
 
-	.ProseMirror p { margin-bottom: 1.2em; }
-	.ProseMirror p:last-child { margin-bottom: 0; }
+		p {
+			margin-bottom: 1.2em;
 
-	.ProseMirror strong { font-weight: 600; }
-	.ProseMirror em { font-style: italic; }
+			&:last-child { @apply mb-0; }
+		}
 
-	/* placeholder */
-	.ProseMirror p.is-editor-empty:first-child::before {
-		content: attr(data-placeholder);
-		color: var(--text-dim);
-		pointer-events: none;
-		float: left;
-		height: 0;
-		font-style: italic;
+		strong { @apply font-semibold; }
+		em { @apply italic; }
+
+		/* placeholder */
+		p.is-editor-empty:first-child::before {
+			@apply
+				text-fg-dim
+				pointer-events-none
+				float-left
+				h-0
+				italic;
+			content: attr(data-placeholder);
+		}
 	}
 
 	/* suggestion marks */
 	.suggestion {
-		border-radius: 2px;
-		cursor: pointer;
-		transition: background 0.1s;
-		padding: 0 1px;
+		@apply
+			rounded-xs
+			cursor-pointer
+			px-px
+			transition-colors
+			duration-100;
 	}
-	.suggestion--grammar    { background: var(--sg-grammar-bg); }
-	.suggestion--vocabulary { background: var(--sg-vocab-bg);   }
-	.suggestion--clarity    { background: var(--sg-clarity-bg); }
-	.suggestion--tone       { background: var(--sg-tone-bg);    }
+	.suggestion--grammar    { @apply bg-grammar-bg; }
+	.suggestion--vocabulary { @apply bg-vocab-bg;   }
+	.suggestion--clarity    { @apply bg-clarity-bg; }
+	.suggestion--tone       { @apply bg-tone-bg;    }
 
 	.suggestion:hover { filter: var(--lift); }
 
@@ -557,268 +647,308 @@
 	   original text; .diff-del styles chars that are really there,
 	   .diff-ins spans are decoration widgets (visual-only) */
 	.ProseMirror .diff-del {
-		color: var(--diff-del);
-		background: var(--diff-del-bg);
-		text-decoration: line-through;
-		text-decoration-thickness: 1px;
-		border-radius: 2px;
+		@apply
+			text-del
+			bg-del-bg
+			line-through
+			decoration-1
+			rounded-xs;
 	}
 	.ProseMirror .diff-ins {
-		color: var(--diff-ins);
-		background: var(--diff-ins-bg);
-		border-radius: 2px;
-		padding: 0 1px;
-		cursor: pointer;
+		@apply
+			text-ins
+			bg-ins-bg
+			rounded-xs
+			px-px
+			cursor-pointer;
 	}
 
 	/* focus highlight + locate pulse — rendered as PM decorations
 	   (.sg-locate spans), so they survive editor redraws. the pulse fires
 	   only when focus arrives from the sidebar; the * covers diff-ins and
-	   diff-del child spans inside the mark so they flash in step */
+	   diff-del child spans inside the mark so they flash in step.
+	   keyframes stay OUT of @theme and animations are declared with literal
+	   names — cssnano's advanced preset discards keyframes it cannot see
+	   used, and it cannot see through animate-* var() indirection */
 	@keyframes locate-pulse {
 		50% {
-			background-color: #4285f4;
+			background: var(--pulse);
 		}
 	}
 	.sg-locate-pulse,
 	.sg-locate-pulse * {
-		animation-name: locate-pulse;
-		animation-duration: 2s;
-		animation-iteration-count: 2;
+		animation: locate-pulse 2s 2;
 	}
 
 	/* ── sidebar ───────────────────────────────────────── */
 	#sidebar {
+		@apply
+			relative
+			flex
+			flex-col
+			overflow-hidden
+			bg-surface;
 		grid-area: sidebar;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-		background: var(--bg-surface);
-		position: relative;
 	}
 
 	/* drag handle on the sidebar's left edge */
 	#sidebar-resizer {
-		position: absolute;
-		top: 0;
-		left: -3px;
-		width: 7px;
-		height: 100%;
-		cursor: col-resize;
-		z-index: 20;
-		touch-action: none;
+		@apply
+			absolute
+			top-0
+			-left-3
+			w-7
+			h-full
+			cursor-col-resize
+			z-20
+			touch-none;
 
 		&::after {
+			@apply
+				absolute
+				top-0
+				left-3
+				w-px
+				h-full
+				bg-transparent
+				transition-colors
+				duration-150;
 			content: "";
-			position: absolute;
-			top: 0;
-			left: 3px;
-			width: 1px;
-			height: 100%;
-			background: transparent;
-			transition: background 0.15s;
 		}
 
 		&:hover::after,
 		&.dragging::after {
-			background: var(--accent-dim);
+			@apply bg-accent-dim;
 		}
 	}
 
 	/* no text selection or editor cursor while dragging */
-	body.resizing {
-		cursor: col-resize;
-		user-select: none;
-	}
+	body.resizing { @apply cursor-col-resize select-none; }
 
 	#sidebar-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 14px 16px 12px;
-		border-bottom: 1px solid var(--border);
-		flex-shrink: 0;
+		@apply
+			flex
+			items-center
+			justify-between
+			pt-14
+			px-16
+			pb-12
+			border-b
+			border-line
+			shrink-0;
 	}
 
 	#sidebar-header h2 {
-		font-size: 10px;
-		font-weight: 500;
-		letter-spacing: 0.15em;
-		text-transform: uppercase;
-		color: var(--text-mid);
+		@apply
+			text-2xs
+			font-medium
+			tracking-caps
+			uppercase
+			text-fg-mid;
 	}
 
 	#suggestion-count {
-		font-size: 10px;
-		color: var(--text-dim);
-		background: var(--bg-raised);
-		padding: 2px 6px;
-		border-radius: 10px;
+		@apply
+			text-2xs
+			text-fg-dim
+			bg-raised
+			py-2
+			px-6
+			rounded-full;
 	}
 
 	#sidebar-list {
-		flex: 1;
-		overflow-y: auto;
-		padding: 8px;
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
+		@apply
+			flex-1
+			overflow-y-auto
+			p-8
+			flex
+			flex-col
+			gap-4;
 	}
 
 	/* empty state */
 	#sidebar-empty {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		flex: 1;
-		gap: 8px;
-		color: var(--text-dim);
-		text-align: center;
-		padding: 40px 24px;
+		@apply
+			flex
+			flex-col
+			items-center
+			justify-center
+			flex-1
+			gap-8
+			text-fg-dim
+			text-center
+			py-40
+			px-24;
 	}
 
 	#sidebar-empty .empty-icon {
-		font-size: 28px;
-		opacity: 0.3;
-		margin-bottom: 4px;
+		@apply
+			text-2xl
+			opacity-30
+			mb-4;
 	}
 
-	#sidebar-empty p {
-		font-size: 11px;
-		line-height: 1.6;
-	}
+	#sidebar-empty p { @apply text-xs leading-relaxed; }
 
 	/* suggestion card */
 	.sg-card {
-		padding: 10px 12px;
-		border-radius: var(--radius);
-		border: 1px solid var(--border);
-		background: var(--bg-raised);
-		cursor: pointer;
+		@apply
+			py-10
+			px-12
+			rounded-base
+			border
+			border-line
+			bg-raised
+			cursor-pointer;
 		transition: border-color 0.15s, background 0.15s, padding 0.15s;
-	}
-	.sg-card:hover { background: var(--bg-hover); border-color: var(--border-mid); }
 
-	/* the focused card grows a little so the eye lands on it after a
-	   click in the editor scrolls it to the top of the list */
-	.sg-card.active {
-		border-color: var(--accent-dim);
-		background: var(--bg-hover);
-		padding: 16px 14px;
+		&:hover { @apply bg-hover border-line-mid; }
+
+		/* the focused card grows a little so the eye lands on it after a
+		   click in the editor scrolls it to the top of the list */
+		&.active {
+			@apply
+				border-accent-dim
+				bg-hover
+				py-16
+				px-14;
+		}
 	}
 	.sg-card .sg-card-explanation,
 	.sg-card .sg-diff,
 	.sg-card .sg-badge,
 	.sg-card .sg-btn { transition: font-size 0.15s, padding 0.15s; }
-	.sg-card.active .sg-card-explanation { font-size: 12px; }
-	.sg-card.active .sg-diff             { font-size: 12px; }
-	.sg-card.active .sg-badge            { font-size: 10px; }
-	.sg-card.active .sg-btn              { font-size: 11px; padding: 3px 10px; }
+	.sg-card.active .sg-card-explanation { @apply text-sm; }
+	.sg-card.active .sg-diff             { @apply text-sm; }
+	.sg-card.active .sg-badge            { @apply text-2xs; }
+	.sg-card.active .sg-btn              { @apply text-xs py-3 px-10; }
 
 	.sg-card-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 6px;
+		@apply
+			flex
+			items-center
+			justify-between
+			mb-6;
 	}
 
 	.sg-badge {
-		font-size: 9px;
-		font-weight: 500;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		padding: 2px 6px;
-		border-radius: 3px;
+		@apply
+			text-3xs
+			font-medium
+			tracking-badge
+			uppercase
+			py-2
+			px-6
+			rounded-sm;
 	}
-	.sg-badge--grammar    { color: var(--sg-grammar);  background: var(--sg-grammar-bg); }
-	.sg-badge--vocabulary { color: var(--sg-vocab);    background: var(--sg-vocab-bg);   }
-	.sg-badge--clarity    { color: var(--sg-clarity);  background: var(--sg-clarity-bg); }
-	.sg-badge--tone       { color: var(--sg-tone);     background: var(--sg-tone-bg);    }
+	.sg-badge--grammar    { @apply text-grammar bg-grammar-bg; }
+	.sg-badge--vocabulary { @apply text-vocab   bg-vocab-bg;   }
+	.sg-badge--clarity    { @apply text-clarity bg-clarity-bg; }
+	.sg-badge--tone       { @apply text-tone    bg-tone-bg;    }
 
-	.sg-card-actions {
-		display: flex;
-		gap: 4px;
-	}
+	.sg-card-actions { @apply flex gap-4; }
 
 	.sg-btn {
-		padding: 2px 8px;
-		border-radius: 3px;
-		border: 1px solid var(--border-mid);
-		background: transparent;
-		color: var(--text-mid);
-		font-family: var(--font-ui);
-		font-size: 10px;
-		cursor: pointer;
-		transition: all 0.12s;
+		@apply
+			py-2
+			px-8
+			rounded-sm
+			border
+			border-line-mid
+			bg-transparent
+			text-fg-mid
+			font-ui
+			text-2xs
+			cursor-pointer
+			transition-all
+			duration-120;
+
+		&:hover { @apply text-fg border-fg-dim; }
+		&.accept:hover { @apply text-accent border-accent-dim; }
+		&.reject:hover { @apply text-grammar border-grammar; }
 	}
-	.sg-btn:hover { color: var(--text); border-color: var(--text-dim); }
-	.sg-btn.accept:hover { color: var(--accent); border-color: var(--accent-dim); }
-	.sg-btn.reject:hover { color: var(--sg-grammar); border-color: var(--sg-grammar); }
 
 	.sg-card-explanation {
-		font-size: 11px;
-		color: var(--text-mid);
-		line-height: 1.5;
-		margin-bottom: 6px;
+		@apply
+			text-xs
+			text-fg-mid
+			leading-normal
+			mb-6;
 	}
 
 	/* inline diff — unchanged context plain, deletions struck out,
 	   insertions highlighted; pre-wrap keeps whitespace-only edits
 	   (e.g. "-" → " ") visible */
 	.sg-diff {
-		font-size: 11px;
-		line-height: 1.7;
-		color: var(--text-mid);
-		white-space: pre-wrap;
-		word-break: break-word;
+		@apply
+			text-xs
+			leading-loose
+			text-fg-mid
+			whitespace-pre-wrap
+			wrap-break-word;
 
 		.diff-del {
-			color: var(--diff-del);
-			background: var(--diff-del-bg);
-			text-decoration: line-through;
-			text-decoration-thickness: 1px;
-			border-radius: 2px;
-			padding: 1px 2px;
+			@apply
+				text-del
+				bg-del-bg
+				line-through
+				decoration-1
+				rounded-xs
+				py-px
+				px-2;
 		}
 
 		.diff-ins {
-			color: var(--diff-ins);
-			background: var(--diff-ins-bg);
-			border-radius: 2px;
-			padding: 1px 2px;
+			@apply
+				text-ins
+				bg-ins-bg
+				rounded-xs
+				py-px
+				px-2;
 		}
 	}
 
 	/* ── tooltip ───────────────────────────────────────── */
 	#tooltip {
-		@apply popup-chrome;
-		position: fixed;
-		z-index: 100;
-		display: none;
-		flex-direction: column;
-		gap: 8px;
-		padding: 10px 12px;
-		min-width: 220px;
-		max-width: 320px;
-	}
-	#tooltip.visible { display: flex; }
+		@apply
+			popup-chrome
+			fixed
+			z-100
+			hidden
+			flex-col
+			gap-8
+			py-10
+			px-12
+			min-w-220
+			max-w-320;
 
-	#tooltip-badge { align-self: flex-start; }
-	#tooltip-explanation { font-size: 11px; color: var(--text-mid); line-height: 1.5; }
+		&.visible { @apply flex; }
+	}
+
+	#tooltip-badge { @apply self-start; }
+	#tooltip-explanation {
+		@apply
+			text-xs
+			text-fg-mid
+			leading-normal;
+	}
 
 	#tooltip-actions {
-		display: flex;
-		gap: 6px;
-		padding-top: 4px;
-		border-top: 1px solid var(--border);
+		@apply
+			flex
+			gap-6
+			pt-4
+			border-t
+			border-line;
 	}
 
 	/* mini mode (desktop click on a mark): one row — badge, accept, reject */
 	#tooltip.mini {
-		flex-direction: row;
-		align-items: center;
-		min-width: 0;
+		@apply
+			flex-row
+			items-center
+			min-w-0;
 	}
 
 	/* echo pulse: a ghost copy of the popup scales up and fades behind it,
@@ -831,56 +961,57 @@
 		100% { transform: scale(1.2, 1.3); opacity: 0; }
 	}
 	#tooltip.mini::before {
+		@apply
+			absolute
+			inset-0
+			rounded-base
+			bg-pulse
+			pointer-events-none;
 		content: "";
-		position: absolute;
-		inset: 0;
-		border-radius: var(--radius);
-		background: var(--accent);
-		animation: mini-pulse 2s ease infinite;
 		z-index: -1;
-		pointer-events: none;
+		animation: mini-pulse 1.6s ease 2;
 	}
 	/* negative-z children paint above the element's own background, so the
 	   ghost would flood the popup interior — this shield repaints the
 	   surface above the ghost, keeping the echo outside the box only */
 	#tooltip.mini::after {
+		@apply
+			absolute
+			inset-0
+			rounded-base
+			bg-raised
+			pointer-events-none;
 		content: "";
-		position: absolute;
-		inset: 0;
-		border-radius: var(--radius);
-		background: var(--bg-raised);
 		z-index: -1;
-		pointer-events: none;
 	}
 	#tooltip.mini #tooltip-explanation,
-	#tooltip.mini #tooltip-diff { display: none; }
-	#tooltip.mini #tooltip-actions {
-		padding-top: 0;
-		border-top: none;
-	}
+	#tooltip.mini #tooltip-diff { @apply hidden; }
+	#tooltip.mini #tooltip-actions { @apply pt-0 border-t-0; }
 
 	/* ── bubble menu ──────────────────────────────────── */
 	#bubble-menu {
-		@apply popup-chrome;
-		display: flex;
-		gap: 4px;
-		padding: 4px;
-	}
+		@apply
+			popup-chrome
+			flex
+			gap-4
+			p-4;
 
-	/* the buttons are rendered separately from the plugin's show/hide;
-	   an interrupted show (e.g. double-click on a suggestion collapses
-	   the selection) can strand the positioned container with no
-	   buttons in it — an empty shell is never a real menu */
-	#bubble-menu:empty { display: none; }
+		/* the buttons are rendered separately from the plugin's show/hide;
+		   an interrupted show (e.g. double-click on a suggestion collapses
+		   the selection) can strand the positioned container with no
+		   buttons in it — an empty shell is never a real menu */
+		&:empty { @apply hidden; }
+	}
 
 	/* ── picklist ─────────────────────────────────────── */
 	#picklist {
-		@apply popup-chrome;
-		position: fixed;
-		z-index: 110;
-		min-width: 180px;
-		max-width: 300px;
-		padding: 4px;
+		@apply
+			popup-chrome
+			fixed
+			z-110
+			min-w-180
+			max-w-300
+			p-4;
 	}
 
 	/* ── mobile ────────────────────────────────────────── */
@@ -895,18 +1026,20 @@
 				"editor";
 		}
 
-		#sidebar-resizer { display: none; }
+		#sidebar-resizer { @apply hidden; }
 
 		#sidebar {
 			--sheet-peek: 44px;
-			position: fixed;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			z-index: 50;
+			@apply
+				fixed
+				left-0
+				right-0
+				bottom-0
+				z-50
+				border-t
+				border-line-mid
+				shadow-sheet;
 			height: min(60dvh, 480px);
-			border-top: 1px solid var(--border-mid);
-			box-shadow: 0 -8px 24px var(--shadow);
 			transform: translateY(100%);
 			transition: transform 0.25s ease;
 
@@ -916,46 +1049,54 @@
 		}
 
 		#sidebar-header {
+			@apply
+				relative
+				py-0
+				px-16
+				cursor-grab
+				touch-none
+				select-none;
 			height: var(--sheet-peek);
-			padding: 0 16px;
-			cursor: grab;
-			touch-action: none;
-			user-select: none;
-			position: relative;
 
 			/* grab pill */
 			&::before {
+				@apply
+					absolute
+					top-5
+					left-1/2
+					w-36
+					h-4
+					rounded-xs
+					bg-line-mid;
 				content: "";
-				position: absolute;
-				top: 5px;
-				left: 50%;
 				translate: -50%;
-				width: 36px;
-				height: 4px;
-				border-radius: 2px;
-				background: var(--border-mid);
 			}
 		}
 
 		#toolbar {
-			flex-wrap: wrap;
-			gap: 8px;
-			row-gap: 6px;
-			padding: 8px 12px;
+			@apply
+				flex-wrap
+				gap-8
+				gap-y-6
+				py-8
+				px-12;
 		}
-		#toolbar .divider { display: none; }
-		#toolbar-status { min-width: 0; }
+		#toolbar .divider { @apply hidden; }
+		#toolbar-status { @apply min-w-0; }
 
-		#type-toggles { flex-wrap: wrap; }
-		#type-toggles.visible { max-width: none; }
+		#type-toggles { @apply flex-wrap; }
+		#type-toggles.visible { @apply max-w-none; }
 
 		#editor-wrap {
 			/* room for the sheet's peek bar at the bottom */
-			padding: 24px 16px 140px;
-			border-right: none;
+			@apply
+				pt-24
+				px-16
+				pb-140
+				border-r-0;
 		}
 
-		.ProseMirror { font-size: 16px; }
+		.ProseMirror { @apply text-lg; }
 
 		#tooltip {
 			max-width: calc(100vw - 16px);
@@ -963,99 +1104,114 @@
 	}
 
 	/* ── scrollbar ─────────────────────────────────────── */
-	::-webkit-scrollbar { width: 4px; }
-	::-webkit-scrollbar-track { background: transparent; }
-	::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 2px; }
-	::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+	::-webkit-scrollbar { @apply w-4; }
+	::-webkit-scrollbar-track { @apply bg-transparent; }
+	::-webkit-scrollbar-thumb { @apply bg-line-mid rounded-xs; }
+	::-webkit-scrollbar-thumb:hover { @apply bg-fg-dim; }
 }
 /* <--//--------------------------------------------------------[components] */
 @layer components {
 	/* spinner */
 	@keyframes spin { to { transform: rotate(360deg); } }
 	.spinner {
-		width: 10px; height: 10px;
+		@apply size-10 rounded-full;
 		border: 1.5px solid transparent;
 		border-top-color: currentColor;
-		border-radius: 50%;
 		animation: spin 0.7s linear infinite;
 	}
 
 	/* bubble menu buttons */
 	.bubble-btn {
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		padding: 5px 10px;
-		border-radius: 3px;
-		border: none;
-		background: transparent;
-		color: var(--text-mid);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		cursor: pointer;
-		transition: color 0.12s, background 0.12s;
-		white-space: nowrap;
-	}
-	.bubble-btn:hover { color: var(--text); background: var(--bg-hover); }
+		@apply
+			flex
+			items-center
+			gap-5
+			py-5
+			px-10
+			rounded-sm
+			border-none
+			bg-transparent
+			text-fg-mid
+			font-ui
+			text-xs
+			cursor-pointer
+			transition-colors
+			duration-120
+			whitespace-nowrap;
 
-	.bubble-icon {
-		font-size: 13px;
+		&:hover { @apply text-fg bg-hover; }
 	}
+
+	.bubble-icon { @apply text-base; }
 
 	/* picklist entries */
 	.picklist-loading {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 12px;
-		color: var(--text-mid);
-		font-size: 11px;
+		@apply
+			flex
+			items-center
+			gap-8
+			py-10
+			px-12
+			text-fg-mid
+			text-xs;
 	}
 
 	.picklist-error {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		padding: 10px 12px;
-		color: var(--sg-grammar);
-		font-size: 11px;
-		line-height: 1.5;
+		@apply
+			flex
+			flex-col
+			gap-8
+			py-10
+			px-12
+			text-grammar
+			text-xs
+			leading-normal;
 	}
 
 	.picklist-dismiss {
-		align-self: flex-end;
-		padding: 2px 8px;
-		border-radius: 3px;
-		border: 1px solid var(--border-mid);
-		background: transparent;
-		color: var(--text-mid);
-		font-family: var(--font-ui);
-		font-size: 10px;
-		cursor: pointer;
+		@apply
+			self-end
+			py-2
+			px-8
+			rounded-sm
+			border
+			border-line-mid
+			bg-transparent
+			text-fg-mid
+			font-ui
+			text-2xs
+			cursor-pointer;
+
+		&:hover { @apply text-fg border-fg-dim; }
 	}
-	.picklist-dismiss:hover { color: var(--text); border-color: var(--text-dim); }
 
 	.picklist-item {
-		display: flex;
-		align-items: baseline;
-		gap: 8px;
-		padding: 6px 10px;
-		border-radius: 3px;
-		cursor: pointer;
-		transition: background 0.1s;
+		@apply
+			flex
+			items-baseline
+			gap-8
+			py-6
+			px-10
+			rounded-sm
+			cursor-pointer
+			transition-colors
+			duration-100;
+
+		&:hover { @apply bg-hover; }
 	}
-	.picklist-item:hover { background: var(--bg-hover); }
 
 	.picklist-synonym {
-		color: var(--text);
-		font-size: 12px;
-		font-family: var(--font-ui);
+		@apply
+			text-fg
+			text-sm
+			font-ui;
 	}
 
 	.picklist-note {
-		color: var(--text-dim);
-		font-size: 10px;
-		font-family: var(--font-ui);
-		font-style: italic;
+		@apply
+			text-fg-dim
+			text-2xs
+			font-ui
+			italic;
 	}
 }
