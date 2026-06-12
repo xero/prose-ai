@@ -9,6 +9,8 @@
 
 **Four editorial modes.** Proofread, Rewrite, Formalize, and Concise. Proofread lets you toggle the suggestion types you care about (grammar, vocabulary, clarity, tone).
 
+**Light and dark themes.** A sun/moon toggle in the toolbar morphs between a warm paper theme and the original ink-dark one, cross-fading the whole UI like a sunset into dark mode. First visit follows your OS preference, and your choice persists locally after that.
+
 **Inline tracked changes.** Suggestions render directly in your prose as changesets: deletions struck out in place, insertions highlighted, unchanged words untouched. Sub-word edits expand to whole words; punctuation-only edits stay surgical. Underneath, the document holds only your original text (insertions are a visual overlay), so copy, paste, and saves stay clean until you accept.
 
 **Streaming suggestions.** prose-ai splits the document into paragraph chunks and analyzes them concurrently. Each suggestion lands in the editor the moment the model finishes writing it; the first change appears in seconds while the rest of the document is still processing. Triage from the start, no waiting for the full run.

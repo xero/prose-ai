@@ -3,7 +3,16 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#efebdf" />
 	<title>prose-ai</title>
+	<!-- pre-paint theme: a stored choice (or OS preference) must land before
+	     first paint, or dark users get a paper flash on every load -->
+	<script>
+		const stored = localStorage.getItem('prose-ai:theme');
+		if (stored === 'dark' || (!stored && matchMedia('(prefers-color-scheme: dark)').matches)) {
+			document.documentElement.classList.add('dark');
+		}
+	</script>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -48,6 +57,26 @@
 		<div class="spacer"></div>
 
 		<span id="toolbar-status"></span>
+		<button id="btn-theme" aria-pressed="false" aria-label="toggle color scheme">
+			<svg class="sunAndMoon" aria-hidden="true" viewBox="1 0 24 24">
+				<mask id="moonMask" class="moon">
+					<rect fill="white" height="100%" width="100%" x="0" y="0"/>
+					<circle cx="0" cy="10" fill="black" r="6"/>
+				</mask>
+				<circle class="sun" cx="12" cy="12" fill="currentColor" mask="url(#moonMask)" r="6"/>
+				<g class="sunBeams" stroke="currentColor">
+					<line x1="12" x2="12" y1="1" y2="3"/>
+					<line x1="12" x2="12" y1="21" y2="23"/>
+					<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+					<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+					<line x1="1" x2="3" y1="12" y2="12"/>
+					<line x1="21" x2="23" y1="12" y2="12"/>
+					<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+					<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+				</g>
+			</svg>
+			<kbd id="theme-label">light</kbd>
+		</button>
 		<button id="btn-undo">undo</button>
 		<button id="btn-reflow">reflow</button>
 		<button id="btn-cancel">cancel</button>
