@@ -25,8 +25,8 @@ describe('diffParts', () => {
 
 	test('hyphen to space is a tiny del + ins, not a rewrite', () => {
 		const parts = diffParts(
-			"the relay's message-size limit",
-			"the relay's message size limit"
+			'the relay\'s message-size limit',
+			'the relay\'s message size limit'
 		);
 		expect(joined(parts, ['del'])).toBe('-');
 		expect(joined(parts, ['ins'])).toBe(' ');

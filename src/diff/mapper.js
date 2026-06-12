@@ -98,11 +98,14 @@ export const mapSuggestions = (editor, suggestions, hintPos = null) => {
 
 		// ── 2. fuzzy fallback (model sometimes paraphrases) ──
 		// match_main throws on patterns > 32 chars and can return loose hits,
-		// so guard it and only trust a window that mostly equals the original
+		// so guard it and only trust a window that mostly equals the original.
+		// 0.8 is deliberately strict: a dropped suggestion is a warn in the
+		// console, a misplaced mark corrupts the user's text on accept
 		if (from === null) {
 			let fuzzyIdx = -1;
-			try { fuzzyIdx = dmp.match_main(text, s.original.slice(0, 32), hintOffset); }
-			catch { /* pattern unusable — treat as no match */ }
+			try {
+				fuzzyIdx = dmp.match_main(text, s.original.slice(0, 32), hintOffset);
+			} catch { /* pattern unusable — treat as no match */ }
 			if (fuzzyIdx !== -1 && !crossesBlocks(chars, fuzzyIdx, s.original.length)) {
 				const window = text.slice(fuzzyIdx, fuzzyIdx + s.original.length);
 				const common = dmp.diff_main(window, s.original)

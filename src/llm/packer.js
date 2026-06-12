@@ -40,10 +40,10 @@ export const packChunks = (blocks, budget) => {
 };
 
 const makeChunk = (blocks) => ({
-	text:      blocks.map(b => b.text).join('\n\n'),
+	text: blocks.map(b => b.text).join('\n\n'),
 	blocks,
 	totalFrom: blocks[0].from,
-	totalTo:   blocks[blocks.length - 1].to,
+	totalTo: blocks[blocks.length - 1].to,
 });
 
 // withContext(chunks, blocks, cap) → chunks, each with a .context string

@@ -95,7 +95,9 @@ export class RequestPool {
 					yielded++;
 					continue;
 				}
-				await new Promise(r => { this.#progNotify = r; });
+				await new Promise(r => {
+					this.#progNotify = r;
+				});
 			}
 		} finally {
 			this.#progressive = false;
@@ -124,7 +126,9 @@ export class RequestPool {
 
 		if (this.#progressive) {
 			this.#progQueue.push({ index: i, ...result });
-			if (this.#progNotify) { this.#progNotify(); this.#progNotify = null; }
+			if (this.#progNotify) {
+				this.#progNotify(); this.#progNotify = null;
+			}
 			if (this.#settled < this.#total) {
 				this.#drain();
 			} else {
@@ -158,7 +162,9 @@ export class RequestPool {
 
 		if (this.#progressive) {
 			this.#pending = [];
-			if (this.#progNotify) { this.#progNotify(); this.#progNotify = null; }
+			if (this.#progNotify) {
+				this.#progNotify(); this.#progNotify = null;
+			}
 			return;
 		}
 

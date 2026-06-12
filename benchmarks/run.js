@@ -31,34 +31,34 @@ const PROOFREAD_TYPES    = ['grammar', 'vocabulary', 'clarity', 'tone'];
 function parseArgs() {
 	const argv = process.argv.slice(2);
 	const a = {
-		models:        null,
-		docs:          null,
-		modes:         null,
-		runs:          null,
-		out:           null,
-		timeout:       null,
-		baseline:      null,
+		models: null,
+		docs: null,
+		modes: null,
+		runs: null,
+		out: null,
+		timeout: null,
+		baseline: null,
 		baselineModel: null,
-		chunked:       false,
-		sweep:         false,
-		quick:         false,
-		help:          false,
+		chunked: false,
+		sweep: false,
+		quick: false,
+		help: false,
 	};
 	for (let i = 0; i < argv.length; i++) {
 		switch (argv[i]) {
-			case '--models':  a.models  = argv[++i].split(','); break;
-			case '--docs':    a.docs    = argv[++i].split(','); break;
-			case '--modes':   a.modes   = argv[++i].split(','); break;
-			case '--runs':    a.runs    = Number(argv[++i]);    break;
-			case '--out':     a.out     = argv[++i];            break;
-			case '--timeout': a.timeout = Number(argv[++i]);    break;
-			case '--baseline':       a.baseline      = argv[++i]; break;
-			case '--baseline-model': a.baselineModel = argv[++i]; break;
-			case '--chunked': a.chunked = true;                 break;
-			case '--sweep':   a.sweep   = true;                 break;
-			case '--quick':   a.quick   = true;                 break;
-			case '--help':
-			case '-h':        a.help    = true;                 break;
+		case '--models':  a.models  = argv[++i].split(','); break;
+		case '--docs':    a.docs    = argv[++i].split(','); break;
+		case '--modes':   a.modes   = argv[++i].split(','); break;
+		case '--runs':    a.runs    = Number(argv[++i]);    break;
+		case '--out':     a.out     = argv[++i];            break;
+		case '--timeout': a.timeout = Number(argv[++i]);    break;
+		case '--baseline':       a.baseline      = argv[++i]; break;
+		case '--baseline-model': a.baselineModel = argv[++i]; break;
+		case '--chunked': a.chunked = true;                 break;
+		case '--sweep':   a.sweep   = true;                 break;
+		case '--quick':   a.quick   = true;                 break;
+		case '--help':
+		case '-h':        a.help    = true;                 break;
 		}
 	}
 	return a;
@@ -155,15 +155,15 @@ function classifyResponse(raw) {
 
 const chatBody = (model, prompt) => JSON.stringify({
 	model,
-	messages:    [{ role: 'user', content: prompt }],
-	stream:      false,
-	max_tokens:  MAX_TOKENS,
+	messages: [{ role: 'user', content: prompt }],
+	stream: false,
+	max_tokens: MAX_TOKENS,
 	temperature: TEMPERATURE,
 	...EXTRA_BODY,
 });
 
 const chatHeaders = {
-	'Content-Type':  'application/json',
+	'Content-Type': 'application/json',
 	'Authorization': `Bearer ${BACKEND_KEY}`,
 };
 
@@ -172,10 +172,10 @@ async function chatCall(model, prompt, timeoutMs) {
 	const timer = setTimeout(() => ctrl.abort(), timeoutMs);
 	try {
 		const res = await fetch(`${BACKEND_URL}/chat/completions`, {
-			method:  'POST',
+			method: 'POST',
 			headers: chatHeaders,
-			body:    chatBody(model, prompt),
-			signal:  ctrl.signal,
+			body: chatBody(model, prompt),
+			signal: ctrl.signal,
 		});
 		if (!res.ok) {
 			throw new Error(`backend HTTP ${res.status}: ${await res.text()}`);
@@ -184,7 +184,7 @@ async function chatCall(model, prompt, timeoutMs) {
 		return data.choices?.[0]?.message?.content ?? '';
 	} catch (err) {
 		if (err.name === 'AbortError') {
-			throw new Error(`timed out after ${timeoutMs}ms`);
+			throw new Error(`timed out after ${timeoutMs}ms`, { cause: err });
 		}
 		throw err;
 	} finally {
@@ -201,7 +201,7 @@ async function benchCombo(model, doc, text, mode, runs, timeoutMs) {
 
 	for (let i = 0; i < runs; i++) {
 		const t0 = performance.now();
-		let raw = '', status = 'ok';
+		let raw = '', status;
 		try {
 			raw    = await chatCall(model, prompt, timeoutMs);
 			status = classifyResponse(raw);
@@ -225,20 +225,25 @@ async function benchCombo(model, doc, text, mode, runs, timeoutMs) {
 
 	return {
 		doc, model, mode,
-		runs:               timings,
-		avg:                Math.round(mean(keptTimings)),
-		median:             Math.round(median(keptTimings)),
-		min:                Math.min(...keptTimings),
-		max:                Math.max(...keptTimings),
-		suggestion_counts:  counts,
-		avg_suggestions:    Math.round(mean(keptCounts) * 100) / 100,
+		runs: timings,
+		avg: Math.round(mean(keptTimings)),
+		median: Math.round(median(keptTimings)),
+		min: Math.min(...keptTimings),
+		max: Math.max(...keptTimings),
+		suggestion_counts: counts,
+		avg_suggestions: Math.round(mean(keptCounts) * 100) / 100,
 		statuses,
 		parse_success_rate: tally.ok / keptStatuses.length,
-		status_tally:       tally,
+		status_tally: tally,
 	};
 }
 
 // ── chunked combo ──────────────────────────────────────────────────
+// known divergence from the app: the bench uses stream:false and
+// whole-response validateOutput (which includes truncation repair), while
+// the app streams per-item through validateItem. total decode is the same
+// either way, which is what the latency numbers measure; suggestion counts
+// can differ slightly from what the app would apply.
 
 async function benchComboChunked(
 	model, doc, text, mode, runs, timeoutMs, budget, concurrency
@@ -272,9 +277,9 @@ async function benchComboChunked(
 			const pool = new RequestPool({ limit: concurrency });
 			const jobs = chunks.map(chunk => async (signal) => {
 				const res = await fetch(`${BACKEND_URL}/chat/completions`, {
-					method:  'POST',
+					method: 'POST',
 					headers: chatHeaders,
-					body:    chatBody(model, buildPrompt(chunk.text, mode, types, chunk.context)),
+					body: chatBody(model, buildPrompt(chunk.text, mode, types, chunk.context)),
 					signal,
 				});
 				if (!res.ok) throw new Error(`backend HTTP ${res.status}`);
@@ -291,7 +296,9 @@ async function benchComboChunked(
 			for (const wave of waves) {
 				if (wave.length === 0 || timedOut) continue;
 				for await (const r of pool.runProgressive(wave)) {
-					if (r.status === 'aborted') { timedOut = true; break; }
+					if (r.status === 'aborted') {
+						timedOut = true; break;
+					}
 					if (!ttf) ttf = Math.round(performance.now() - t0);
 					if (r.status === 'fulfilled') sugg.push(...r.value);
 				}
@@ -314,16 +321,16 @@ async function benchComboChunked(
 
 	return {
 		doc, model, mode, budget, concurrency,
-		runs:             timings,
-		avg:              Math.round(mean(keptTimings)),
-		median:           Math.round(median(keptTimings)),
-		min:              keptTimings.length ? Math.min(...keptTimings) : 0,
-		max:              keptTimings.length ? Math.max(...keptTimings) : 0,
+		runs: timings,
+		avg: Math.round(mean(keptTimings)),
+		median: Math.round(median(keptTimings)),
+		min: keptTimings.length ? Math.min(...keptTimings) : 0,
+		max: keptTimings.length ? Math.max(...keptTimings) : 0,
 		suggestion_counts: counts,
-		avg_suggestions:  Math.round(mean(keptCounts) * 100) / 100,
-		chunk_count:      chunks.length,
-		ttf_runs:         ttfs,
-		ttf_avg:          Math.round(mean(keptTtfs)),
+		avg_suggestions: Math.round(mean(keptCounts) * 100) / 100,
+		chunk_count: chunks.length,
+		ttf_runs: ttfs,
+		ttf_avg: Math.round(mean(keptTtfs)),
 	};
 }
 
@@ -982,10 +989,12 @@ async function main() {
 	const timeoutMs = opts.timeout ?? DEFAULT_TIMEOUT_MS;
 
 	let host = 'unknown', backendVer = 'unknown';
-	try { host      = execSync('uname -a',            { encoding: 'utf8' }).trim(); }
-	catch {}
-	try { backendVer = execSync('rapid-mlx --version', { encoding: 'utf8' }).trim(); }
-	catch {}
+	try {
+		host      = execSync('uname -a',            { encoding: 'utf8' }).trim();
+	} catch { /* report 'unknown' in the markdown header */ }
+	try {
+		backendVer = execSync('rapid-mlx --version', { encoding: 'utf8' }).trim();
+	} catch { /* report 'unknown' in the markdown header */ }
 
 	if (opts.sweep) {
 		await runSweep(opts, models, modes, runs, timeoutMs, host, backendVer);

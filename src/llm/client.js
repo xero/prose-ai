@@ -4,9 +4,9 @@
 
 import { buildPrompt, validateItem }             from './prompt.js';
 import { BACKEND_URL, BACKEND_KEY, MODEL,
-         CHUNK_CHAR_BUDGET, CONTEXT_CHAR_CAP,
-         MAX_CONCURRENT, MAX_TOKENS,
-         TEMPERATURE, EXTRA_BODY }               from './config.js';
+	CHUNK_CHAR_BUDGET, CONTEXT_CHAR_CAP,
+	MAX_CONCURRENT, MAX_TOKENS,
+	TEMPERATURE, EXTRA_BODY }               from './config.js';
 import { walkDocument }                          from './walker.js';
 import { packChunks, withContext }               from './packer.js';
 import { RequestPool }                           from './pool.js';
@@ -21,6 +21,11 @@ let token = 0;
 // when the backend dies mid-run the run PAUSES: applied suggestions stay,
 // finished chunks are remembered here, and the next analyze press resumes
 // just the unfinished ones. a completed run clears this → fresh sweep.
+// completed chunks are keyed by TEXT, not position: accepting suggestions
+// while paused shifts every later position but leaves untouched paragraphs
+// byte-identical. the cost is that duplicate paragraphs share one key, so
+// a doc with two identical chunks may skip the second on resume — rarer
+// than accepts-while-paused, which position keys would break every time.
 let paused = null;  // { mode, types: [], doneTexts: Set<string> }
 
 // canResume(mode, types) — true when the next analyze press would resume
@@ -30,8 +35,10 @@ export const canResume = (mode, types) =>
 	paused.mode === mode &&
 	paused.types.join(',') === [...types].join(',');
 
-// how long analyze() will wait for a crashed backend to be resurrected
-// by start.sh's supervisor before giving up
+// how long analyze() will wait for a crashed backend to be resurrected by
+// start.sh's supervisor before giving up. a relaunch is ~15-30s (3s loop
+// delay + model load); 90s also covers a cold first load without leaving
+// the user staring at a stuck spinner for minutes
 const BACKEND_WAIT_MS = 90_000;
 
 const backendUp = async () => {
@@ -72,16 +79,16 @@ const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
 	let res;
 	try {
 		res = await fetch(`${BACKEND_URL}/chat/completions`, {
-			method:  'POST',
+			method: 'POST',
 			headers: {
-				'Content-Type':  'application/json',
+				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${BACKEND_KEY}`,
 			},
-			body:    JSON.stringify({
-				model:       MODEL,
-				messages:    [{ role: 'user', content: buildPrompt(chunk.text, mode, types, chunk.context) }],
-				stream:      true,
-				max_tokens:  MAX_TOKENS,
+			body: JSON.stringify({
+				model: MODEL,
+				messages: [{ role: 'user', content: buildPrompt(chunk.text, mode, types, chunk.context) }],
+				stream: true,
+				max_tokens: MAX_TOKENS,
 				temperature: TEMPERATURE,
 				...EXTRA_BODY,
 			}),
@@ -108,7 +115,9 @@ const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
 	let count = 0;
 	const extract = createItemExtractor((item) => {
 		const valid = validateItem(item, chunk.text);
-		if (valid) { count++; onSuggestion(valid); }
+		if (valid) {
+			count++; onSuggestion(valid);
+		}
 	});
 	try {
 		await parseSSE(res, extract);
@@ -162,7 +171,9 @@ export async function* analyze(doc, mode, types) {
 	let notify  = null;
 	const push  = (ev) => {
 		queue.push(ev);
-		if (notify) { notify(); notify = null; }
+		if (notify) {
+			notify(); notify = null;
+		}
 	};
 
 	const jobs = todo.map((chunk) => (signal) =>
@@ -199,21 +210,25 @@ export async function* analyze(doc, mode, types) {
 					doneTexts.add(todo[result.index + wave.offset].text);
 				}
 				push({
-					type:  'chunk',
+					type: 'chunk',
 					index: result.index + wave.offset,
 					total,
 					count: result.status === 'fulfilled' ? result.value : 0,
 					error: result.status === 'rejected'  ? result.reason : null,
 				});
 			}
-			if (pausing) { push({ type: 'paused' }); return; }
+			if (pausing) {
+				push({ type: 'paused' }); return;
+			}
 		}
 		push({ type: 'done' });
 	})();
 
 	while (true) {
 		if (queue.length === 0) {
-			await new Promise((r) => { notify = r; });
+			await new Promise((r) => {
+				notify = r;
+			});
 		}
 		while (queue.length > 0) {
 			if (token !== myToken) {

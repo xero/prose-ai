@@ -32,7 +32,7 @@ export const walkDocument = (doc, mode) => {
 				blocks.push({
 					text,
 					from: pos,
-					to:   pos + node.nodeSize,
+					to: pos + node.nodeSize,
 					type: 'listItem',
 				});
 			}
@@ -46,7 +46,7 @@ export const walkDocument = (doc, mode) => {
 				blocks.push({
 					text,
 					from: pos,
-					to:   pos + node.nodeSize,
+					to: pos + node.nodeSize,
 					type: inQuote ? 'blockquote' : 'paragraph',
 				});
 			}
@@ -60,7 +60,7 @@ export const walkDocument = (doc, mode) => {
 					blocks.push({
 						text,
 						from: pos,
-						to:   pos + node.nodeSize,
+						to: pos + node.nodeSize,
 						type: 'heading',
 					});
 				}

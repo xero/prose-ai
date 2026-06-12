@@ -14,10 +14,10 @@ export function buildDocFromText(text) {
 		const nodeSize = blockText.length + 2;
 		pos += nodeSize;
 		return {
-			type:        { name: 'paragraph' },
+			type: { name: 'paragraph' },
 			textContent: blockText,
 			nodeSize,
-			_pos:        nodePos,
+			_pos: nodePos,
 		};
 	});
 	return {

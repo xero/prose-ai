@@ -76,9 +76,15 @@ describe('RequestPool', () => {
 		let   started = 0;
 
 		const jobs = [
-			()  => { started++; return new Promise(() => {}); },   // in-flight
-			()  => { started++; return Promise.resolve('ok'); },   // pending
-			()  => { started++; return Promise.resolve('ok'); },   // pending
+			()  => {
+				started++; return new Promise(() => {});
+			},   // in-flight
+			()  => {
+				started++; return Promise.resolve('ok');
+			},   // pending
+			()  => {
+				started++; return Promise.resolve('ok');
+			},   // pending
 		];
 
 		const run = pool.run(jobs);
@@ -95,7 +101,9 @@ describe('RequestPool', () => {
 
 		const jobs = [
 			async () => 'ok1',
-			async () => { throw new Error('boom'); },
+			async () => {
+				throw new Error('boom');
+			},
 			async () => 'ok3',
 		];
 
@@ -143,8 +151,12 @@ describe('RequestPool — runProgressive', () => {
 		const pool = new RequestPool({ limit: 2 });
 
 		const jobs = [
-			async () => { await delay(50); return 'slow'; },
-			async () => { await delay(10); return 'fast'; },
+			async () => {
+				await delay(50); return 'slow';
+			},
+			async () => {
+				await delay(10); return 'fast';
+			},
 		];
 
 		const results = [];
@@ -186,7 +198,9 @@ describe('RequestPool — runProgressive', () => {
 
 		const jobs = [
 			async () => 'ok1',
-			async () => { throw new Error('boom'); },
+			async () => {
+				throw new Error('boom');
+			},
 			async () => 'ok3',
 		];
 

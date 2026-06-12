@@ -32,7 +32,8 @@ export const initResizer = () => {
 
 	handle.addEventListener('pointermove', (e) => {
 		if (!dragging) return;
-		// sidebar sits on the right edge, so width = distance to the right
+		// width is derived from the pointer, not accumulated deltas, so a
+		// pointer that leaves and re-enters mid-drag can never drift
 		setWidth(clamp(Math.round(window.innerWidth - e.clientX)));
 	});
 

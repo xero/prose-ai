@@ -95,7 +95,9 @@ const findMarkById = (editor, id) => {
 		const m = node.marks.find(
 			m => m.type.name === 'suggestion' && m.attrs.id === id
 		);
-		if (m) { attrs ??= m.attrs; original += node.text; }
+		if (m) {
+			attrs ??= m.attrs; original += node.text;
+		}
 	});
 	if (!attrs) return null;
 	return {

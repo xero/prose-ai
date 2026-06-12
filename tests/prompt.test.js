@@ -75,9 +75,9 @@ describe('validateOutput', () => {
 		// appends "in memory" — accepting doubles the phrase
 		const chunk = 'so neither side ever holds the whole file encoded in memory and no frame approaches the limit.';
 		const sugg = JSON.stringify([{
-			original:    'so neither side ever holds the whole file',
+			original: 'so neither side ever holds the whole file',
 			replacement: 'so neither side ever holds the whole file in memory',
-			type:        'clarity',
+			type: 'clarity',
 			explanation: 'clarifies meaning',
 		}]);
 		expect(validateOutput(sugg, chunk).length).toBe(0);
@@ -86,9 +86,9 @@ describe('validateOutput', () => {
 	test('keeps an end-insertion that adds genuinely new text', () => {
 		const chunk = 'The file key never travels. The STREAM construction binds chunk order.';
 		const sugg = JSON.stringify([{
-			original:    'The file key never travels',
+			original: 'The file key never travels',
 			replacement: 'The file key never travels over the network',
-			type:        'clarity',
+			type: 'clarity',
 			explanation: 'adds necessary context',
 		}]);
 		expect(validateOutput(sugg, chunk).length).toBe(1);
@@ -97,9 +97,9 @@ describe('validateOutput', () => {
 	test('drops a start-insertion that duplicates the preceding text', () => {
 		const chunk = 'The relay enforces limits and the sender reads slices.';
 		const sugg = JSON.stringify([{
-			original:    'the sender reads slices',
+			original: 'the sender reads slices',
 			replacement: 'and the sender reads slices',
-			type:        'clarity',
+			type: 'clarity',
 			explanation: 'x',
 		}]);
 		expect(validateOutput(sugg, chunk).length).toBe(0);

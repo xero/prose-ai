@@ -15,10 +15,16 @@ export default defineConfig([
     languageOptions: {
       globals: {
 				AbortController: "readonly",
+				AbortSignal: "readonly",
 				CustomEvent: "readonly",
+				DOMException: "readonly",
+				TextDecoder: "readonly",
+				clearTimeout: "readonly",
+				performance: "readonly",
 				crypto: "readonly",
 				document: "readonly",
 				fetch: "readonly",
+				getComputedStyle: "readonly",
 				localStorage: "readonly",
 				requestAnimationFrame: "readonly",
 				setTimeout: "readonly",

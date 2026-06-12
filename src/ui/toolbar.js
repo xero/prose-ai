@@ -5,7 +5,7 @@
 import { analyze, cancelAnalysis, canResume } from '../llm/client.js';
 import { mapSuggestions }                     from '../diff/mapper.js';
 import { applyMappedSuggestions, clearSuggestions,
-         collectSuggestions }                 from '../state/suggestions.js';
+	collectSuggestions }                 from '../state/suggestions.js';
 
 const el = {
 	btnAnalyze: document.querySelector('#btn-analyze'),
@@ -188,11 +188,4 @@ export const initToolbar = (editor) => {
 		setStatus('');
 	});
 
-	// update count badge whenever suggestions change
-	document.addEventListener('suggestions:changed', ({ detail }) => {
-		const n = detail.suggestions.length;
-		if (n && !el.btnAnalyze.disabled) {
-			// don't clobber an in-progress status message
-		}
-	});
 };

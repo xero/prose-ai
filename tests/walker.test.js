@@ -4,19 +4,19 @@ import { walkDocument }           from '../src/llm/walker.js';
 
 const schema = new Schema({
 	nodes: {
-		doc:           { content: 'block+' },
-		paragraph:     { group: 'block', content: 'inline*' },
-		heading:       {
+		doc: { content: 'block+' },
+		paragraph: { group: 'block', content: 'inline*' },
+		heading: {
 			group: 'block', content: 'inline*',
 			attrs: { level: { default: 1 } },
 		},
-		blockquote:    { group: 'block', content: 'block+' },
-		codeBlock:     { group: 'block', content: 'text*', marks: '' },
-		bulletList:    { group: 'block', content: 'listItem+' },
-		orderedList:   { group: 'block', content: 'listItem+' },
-		listItem:      { content: 'paragraph+' },
+		blockquote: { group: 'block', content: 'block+' },
+		codeBlock: { group: 'block', content: 'text*', marks: '' },
+		bulletList: { group: 'block', content: 'listItem+' },
+		orderedList: { group: 'block', content: 'listItem+' },
+		listItem: { content: 'paragraph+' },
 		horizontalRule: { group: 'block' },
-		text:          { group: 'inline' },
+		text: { group: 'inline' },
 	},
 	marks: {},
 });

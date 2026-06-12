@@ -16,7 +16,9 @@ const expandToWordBoundaries = (parts) => {
 	const out = [];
 	let i = 0;
 	while (i < parts.length) {
-		if (parts[i].op === 'eq') { out.push({ ...parts[i] }); i++; continue; }
+		if (parts[i].op === 'eq') {
+			out.push({ ...parts[i] }); i++; continue;
+		}
 
 		// collect a maximal run of del/ins parts
 		let del = '', ins = '';

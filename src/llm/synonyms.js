@@ -3,7 +3,7 @@
 // ╚═══════════════════════════════╝
 
 import { BACKEND_URL, BACKEND_KEY, MODEL,
-         MAX_TOKENS, TEMPERATURE, EXTRA_BODY } from './config.js';
+	MAX_TOKENS, TEMPERATURE, EXTRA_BODY } from './config.js';
 
 let controller = null;
 
@@ -50,14 +50,14 @@ export const getSynonyms = async (selection, sentence) => {
 		res = await fetch(`${BACKEND_URL}/chat/completions`, {
 			method: 'POST',
 			headers: {
-				'Content-Type':  'application/json',
+				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${BACKEND_KEY}`,
 			},
 			body: JSON.stringify({
-				model:       MODEL,
-				messages:    [{ role: 'user', content: prompt }],
-				stream:      false,
-				max_tokens:  MAX_TOKENS,
+				model: MODEL,
+				messages: [{ role: 'user', content: prompt }],
+				stream: false,
+				max_tokens: MAX_TOKENS,
 				temperature: TEMPERATURE,
 				...EXTRA_BODY,
 			}),

@@ -20,7 +20,9 @@ export const BACKEND_KEY = 'prose-ai';
 //   qwen3.5-27b-4bit  — 15 GB, best quality but ~4 tok/s — too slow here
 export const MODEL = 'qwen3.5-4b-4bit';  // keep in sync with .model
 
-// chunk packing
+// chunk packing — bigger chunks are NOT faster overall: at 3600 chars the
+// model disengages and suggestion yield collapses (see the sweep note on
+// MAX_CONCURRENT below), and time-to-first-suggestion grows with chunk size
 export const CHUNK_CHAR_BUDGET = 1200;
 
 // read-only context prepended to each chunk so the model can resolve

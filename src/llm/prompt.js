@@ -116,7 +116,9 @@ export const validateOutput = (raw, sourceText) => {
 		.replace(/\s*```\s*$/, '')
 		.trim();
 
-	// last resort: slice to the outermost [ … ] if there's leading/trailing prose
+	// last resort: small models sometimes wrap the array in chatter
+	// ("Here are the suggestions: […] Hope this helps!") despite the
+	// raw-JSON instruction — slice to the outermost brackets
 	if (!cleaned.startsWith('[')) {
 		const open  = cleaned.indexOf('[');
 		const close = cleaned.lastIndexOf(']');

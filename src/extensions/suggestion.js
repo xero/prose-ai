@@ -30,7 +30,9 @@ const findMarkRange = (doc, markType, id) => {
 			m => m.type === markType && m.attrs.id === id
 		);
 		if (!m) return;
-		if (from === null) { from = pos; mark = m; }
+		if (from === null) {
+			from = pos; mark = m;
+		}
 		to = pos + node.nodeSize;
 	});
 	return from === null ? null : { from, to, mark };

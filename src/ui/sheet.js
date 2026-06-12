@@ -9,8 +9,14 @@
 
 const mq = window.matchMedia('(width < 768px)');
 
-const PEEK_TAP_SLOP = 6;    // px of movement that still counts as a tap
-const SNAP_DISTANCE = 40;   // px of drag that commits an open/close
+// below this much finger travel a press is a tap (toggle), above it a
+// drag — too low and natural finger wobble defeats tapping, too high and
+// short flicks read as taps and bounce the sheet back
+const PEEK_TAP_SLOP = 6;
+
+// drag must travel this far to commit an open/close; shorter drags snap
+// back so a hesitant half-pull doesn't change state
+const SNAP_DISTANCE = 40;
 
 export const initSheet = () => {
 	const sheet  = document.querySelector('#sidebar');
@@ -19,9 +25,9 @@ export const initSheet = () => {
 
 	// peek only when there is something to triage
 	document.addEventListener('suggestions:changed', ({ detail }) => {
-		const any = detail.suggestions.length > 0;
-		sheet.classList.toggle('has-items', any);
-		if (!any) sheet.classList.remove('open');
+		const hasItems = detail.suggestions.length > 0;
+		sheet.classList.toggle('has-items', hasItems);
+		if (!hasItems) sheet.classList.remove('open');
 	});
 
 	// ── tap or drag on the header ────────────────────────

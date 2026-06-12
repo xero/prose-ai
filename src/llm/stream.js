@@ -28,24 +28,30 @@ export const createItemExtractor = (onItem) => {
 			}
 
 			switch (ch) {
-				case '"':
-					if (inItem) inString = true;
-					break;
-				case '[':
-					if (!started && !inItem) started = true;
-					break;
-				case '{':
-					if (started && !inItem) { inItem = true; buf = '{'; }
-					else if (inItem) depth++;
-					break;
-				case '}':
-					if (!inItem) break;
-					if (depth > 0) { depth--; break; }
-					inItem = false;
-					try { onItem(JSON.parse(buf)); }
-					catch { console.warn('[prose-ai] dropping unparseable stream item:', buf); }
-					buf = '';
-					break;
+			case '"':
+				if (inItem) inString = true;
+				break;
+			case '[':
+				if (!started && !inItem) started = true;
+				break;
+			case '{':
+				if (started && !inItem) {
+					inItem = true; buf = '{';
+				} else if (inItem) depth++;
+				break;
+			case '}':
+				if (!inItem) break;
+				if (depth > 0) {
+					depth--; break;
+				}
+				inItem = false;
+				try {
+					onItem(JSON.parse(buf));
+				} catch {
+					console.warn('[prose-ai] dropping unparseable stream item:', buf);
+				}
+				buf = '';
+				break;
 			}
 		}
 	};
@@ -76,8 +82,11 @@ export const parseSSE = async (response, onDelta) => {
 				if (payload === '[DONE]') return;
 
 				let parsed;
-				try { parsed = JSON.parse(payload); }
-				catch { continue; }
+				try {
+					parsed = JSON.parse(payload);
+				} catch {
+					continue;
+				}
 
 				const delta = parsed.choices?.[0]?.delta?.content;
 				if (typeof delta === 'string' && delta) onDelta(delta);
