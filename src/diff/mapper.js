@@ -85,11 +85,22 @@ export const mapSuggestions = (editor, suggestions, hintPos = null) => {
 		let from = null;
 		let to   = null;
 
-		// ── 1. exact substring match, from the chunk onward ──
-		let exactIdx = text.indexOf(s.original, hintOffset);
-		if (exactIdx === -1) exactIdx = text.indexOf(s.original);
-		while (exactIdx !== -1 && crossesBlocks(chars, exactIdx, s.original.length)) {
-			exactIdx = text.indexOf(s.original, exactIdx + 1);
+		// ── 1. exact substring match, nearest to the chunk ──
+		// the hint is a position captured when the run started, but accepts
+		// applied mid-stream shift later text in BOTH directions. a forward-
+		// only search would miss left-shifted targets and fall back to the
+		// doc start, binding an earlier duplicate of a terse phrase — which
+		// the user sees as a suggestion in the wrong paragraph. nearest-to-
+		// hint tolerates drift and resolves duplicates to the right chunk.
+		let exactIdx = -1;
+		let bestDist = Infinity;
+		for (let i = text.indexOf(s.original); i !== -1; i = text.indexOf(s.original, i + 1)) {
+			if (crossesBlocks(chars, i, s.original.length)) continue;
+			const dist = Math.abs(i - hintOffset);
+			if (dist < bestDist) {
+				bestDist = dist;
+				exactIdx = i;
+			}
 		}
 		if (exactIdx !== -1) {
 			from = offsetToPos(chars, exactIdx);
