@@ -1,9 +1,9 @@
 # prose-ai
 
 > [!NOTE]
-> A local, offline prose editor powered by a language model running on your own machine. Paste or write text, pick an editorial mode, and triage inline tracked changes as they stream in. No cloud, no subscription, no data leaving your machine.
+> Local, offline prose editor powered by a language model running on your own machine. Paste or write text, pick an editorial mode, and triage inline tracked changes as they stream in. No cloud, no subscription, no data leaving your machine.
 
----
+![dark mode preview](https://raw.githubusercontent.com/xero/prose-ai/main/preview.png)
 
 ## Features
 
@@ -93,6 +93,9 @@ bun test
 ```
 
 Results land in [`benchmarks/`](./benchmarks/) alongside the historical runs that picked the current model and tuning.
+
+
+![theme previews](https://raw.githubusercontent.com/xero/prose-ai/main/previews.png)
 
 ---
 
