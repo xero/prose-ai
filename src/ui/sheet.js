@@ -1,0 +1,79 @@
+// ╔═══════════════════════════════╗
+// ║   prose-ai — bottom sheet     ║
+// ╚═══════════════════════════════╝
+
+// on small screens the sidebar becomes a bottom sheet: hidden while
+// empty, peeking its header once suggestions exist, tap or drag to
+// open. desktop layout is untouched — every handler gates on the
+// same breakpoint the stylesheet uses.
+
+const mq = window.matchMedia('(width < 768px)');
+
+const PEEK_TAP_SLOP = 6;    // px of movement that still counts as a tap
+const SNAP_DISTANCE = 40;   // px of drag that commits an open/close
+
+export const initSheet = () => {
+	const sheet  = document.querySelector('#sidebar');
+	const header = document.querySelector('#sidebar-header');
+	const list   = document.querySelector('#sidebar-list');
+
+	// peek only when there is something to triage
+	document.addEventListener('suggestions:changed', ({ detail }) => {
+		const any = detail.suggestions.length > 0;
+		sheet.classList.toggle('has-items', any);
+		if (!any) sheet.classList.remove('open');
+	});
+
+	// ── tap or drag on the header ────────────────────────
+	let startY = null;
+	let moved  = false;
+
+	const peekPx = () =>
+		parseInt(getComputedStyle(sheet).getPropertyValue('--sheet-peek'), 10) || 44;
+
+	header.addEventListener('pointerdown', (e) => {
+		if (!mq.matches) return;
+		startY = e.clientY;
+		moved  = false;
+		sheet.classList.add('dragging');
+		header.setPointerCapture(e.pointerId);
+		e.preventDefault();
+	});
+
+	header.addEventListener('pointermove', (e) => {
+		if (startY === null) return;
+		const dy = e.clientY - startY;
+		if (Math.abs(dy) > PEEK_TAP_SLOP) moved = true;
+
+		const height = sheet.getBoundingClientRect().height;
+		const base   = sheet.classList.contains('open') ? 0 : height - peekPx();
+		const y      = Math.max(0, Math.min(height - peekPx(), base + dy));
+		sheet.style.transform = `translateY(${y}px)`;
+	});
+
+	const settle = (e) => {
+		if (startY === null) return;
+		const dy = e.clientY - startY;
+		startY = null;
+		sheet.classList.remove('dragging');
+		sheet.style.transform = '';
+
+		if (!moved)                  sheet.classList.toggle('open');   // tap
+		else if (dy < -SNAP_DISTANCE) sheet.classList.add('open');
+		else if (dy >  SNAP_DISTANCE) sheet.classList.remove('open');
+	};
+	header.addEventListener('pointerup', settle);
+	header.addEventListener('pointercancel', () => {
+		startY = null;
+		sheet.classList.remove('dragging');
+		sheet.style.transform = '';
+	});
+
+	// picking a card closes the sheet so the editor + tooltip show;
+	// the card's accept/reject buttons keep it open for rapid triage
+	list.addEventListener('click', (e) => {
+		if (!mq.matches) return;
+		if (e.target.closest('[data-action]')) return;
+		if (e.target.closest('.sg-card')) sheet.classList.remove('open');
+	});
+};

@@ -628,8 +628,9 @@
 		}
 
 		/* ── mobile ────────────────────────────────────────── */
-		/* no sidebar below 768px — suggestion triage runs entirely
-		   through the marks and their tooltip popups */
+		/* below 768px the sidebar becomes a bottom sheet: hidden while
+		   empty, peeking its header once suggestions arrive, tap or
+		   drag the header to open */
 		@media (width < 768px) {
 			#app {
 				grid-template-columns: 1fr;
@@ -638,7 +639,47 @@
 					"editor";
 			}
 
-			#sidebar { display: none; }
+			#sidebar-resizer { display: none; }
+
+			#sidebar {
+				--sheet-peek: 44px;
+				position: fixed;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				z-index: 50;
+				height: min(60dvh, 480px);
+				border-top: 1px solid var(--border-mid);
+				box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+				transform: translateY(100%);
+				transition: transform 0.25s ease;
+
+				&.has-items { transform: translateY(calc(100% - var(--sheet-peek))); }
+				&.open      { transform: translateY(0); }
+				&.dragging  { transition: none; }
+			}
+
+			#sidebar-header {
+				height: var(--sheet-peek);
+				padding: 0 16px;
+				cursor: grab;
+				touch-action: none;
+				user-select: none;
+				position: relative;
+
+				/* grab pill */
+				&::before {
+					content: "";
+					position: absolute;
+					top: 5px;
+					left: 50%;
+					translate: -50%;
+					width: 36px;
+					height: 4px;
+					border-radius: 2px;
+					background: var(--border-mid);
+				}
+			}
 
 			#toolbar {
 				flex-wrap: wrap;
@@ -653,7 +694,8 @@
 			#type-toggles.visible { max-width: none; }
 
 			#editor-wrap {
-				padding: 24px 16px 80px;
+				/* room for the sheet's peek bar at the bottom */
+				padding: 24px 16px 140px;
 				border-right: none;
 			}
 
