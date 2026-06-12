@@ -5,27 +5,33 @@
     "": {
       "name": "prose-ai",
       "dependencies": {
-        "@tiptap/core": "latest",
-        "@tiptap/extension-bubble-menu": "latest",
-        "@tiptap/extension-placeholder": "latest",
-        "@tiptap/starter-kit": "latest",
-        "diff-match-patch": "latest",
+        "@tiptap/core": "^3.26.1",
+        "@tiptap/extension-bubble-menu": "^3.26.1",
+        "@tiptap/extension-placeholder": "^3.26.1",
+        "@tiptap/starter-kit": "^3.26.1",
+        "diff-match-patch": "^1.0.5",
       },
       "devDependencies": {
-        "@eslint/js": "latest",
-        "@tailwindcss/postcss": "latest",
-        "assemblyscript": "latest",
-        "cssnano": "latest",
-        "cssnano-preset-advanced": "latest",
-        "eslint": "latest",
-        "jiti": "latest",
-        "postcss": "latest",
-        "tailwindcss": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest",
-        "vite": "latest",
+        "@eslint/js": "^10.0.1",
+        "@tailwindcss/postcss": "^4.3.0",
+        "assemblyscript": "^0.28.19",
+        "cssnano": "^8.0.2",
+        "cssnano-preset-advanced": "^8.0.2",
+        "eslint": "^10.4.1",
+        "jiti": "^2.7.0",
+        "postcss": "^8.5.15",
+        "tailwindcss": "^4.3.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.61.0",
+        "vite": "^8.0.16",
       },
     },
+  },
+  "overrides": {
+    "prosemirror-model": "1.25.8",
+    "prosemirror-state": "1.4.4",
+    "prosemirror-transform": "1.12.0",
+    "prosemirror-view": "1.41.9",
   },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
@@ -596,56 +602,6 @@
 
     "csso/css-tree": ["css-tree@2.2.1", "", { "dependencies": { "mdn-data": "2.0.28", "source-map-js": "^1.0.1" } }, "sha512-OA0mILzGc1kCOCSJerOeqDxDQ4HOh+G8NbOJFOTgOCzpw7fCBubk0fEyxp8AgOL/jvLgYA/uV0cMbe43ElF1JA=="],
 
-    "prosemirror-changeset/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-commands/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-commands/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-dropcursor/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-dropcursor/prosemirror-view": ["prosemirror-view@1.41.6", "", { "dependencies": { "prosemirror-model": "^1.20.0", "prosemirror-state": "^1.0.0", "prosemirror-transform": "^1.1.0" } }, ""],
-
-    "prosemirror-gapcursor/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-gapcursor/prosemirror-view": ["prosemirror-view@1.41.6", "", { "dependencies": { "prosemirror-model": "^1.20.0", "prosemirror-state": "^1.0.0", "prosemirror-transform": "^1.1.0" } }, ""],
-
-    "prosemirror-history/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-history/prosemirror-view": ["prosemirror-view@1.41.6", "", { "dependencies": { "prosemirror-model": "^1.20.0", "prosemirror-state": "^1.0.0", "prosemirror-transform": "^1.1.0" } }, ""],
-
-    "prosemirror-inputrules/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-schema-list/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-schema-list/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-state/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-state/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-state/prosemirror-view": ["prosemirror-view@1.41.6", "", { "dependencies": { "prosemirror-model": "^1.20.0", "prosemirror-state": "^1.0.0", "prosemirror-transform": "^1.1.0" } }, ""],
-
-    "prosemirror-tables/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-tables/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-tables/prosemirror-view": ["prosemirror-view@1.41.6", "", { "dependencies": { "prosemirror-model": "^1.20.0", "prosemirror-state": "^1.0.0", "prosemirror-transform": "^1.1.0" } }, ""],
-
     "csso/css-tree/mdn-data": ["mdn-data@2.0.28", "", {}, "sha512-aylIc7Z9y4yzHYAJNuESG3hfhC+0Ibp/MAMiaOZgNv4pmEdFyfZhhhny4MNiAfWdBQ1RQ2mfDWmM1x8SvGyp8g=="],
-
-    "prosemirror-changeset/prosemirror-transform/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-dropcursor/prosemirror-transform/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-dropcursor/prosemirror-view/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-gapcursor/prosemirror-view/prosemirror-transform": ["prosemirror-transform@1.11.0", "", { "dependencies": { "prosemirror-model": "^1.21.0" } }, ""],
-
-    "prosemirror-history/prosemirror-transform/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-history/prosemirror-view/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
-
-    "prosemirror-inputrules/prosemirror-transform/prosemirror-model": ["prosemirror-model@1.25.4", "", { "dependencies": { "orderedmap": "^2.0.0" } }, ""],
   }
 }
