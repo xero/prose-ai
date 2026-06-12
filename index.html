@@ -36,6 +36,12 @@
 			--sg-clarity-bg: rgba(212, 168, 67, 0.12);
 			--sg-tone:       #9b72c8;
 			--sg-tone-bg:    rgba(155, 114, 200, 0.12);
+
+			/* inline diff colours */
+			--diff-del:    #e05c5c;
+			--diff-del-bg: rgba(224, 92, 92, 0.14);
+			--diff-ins:    #79b873;
+			--diff-ins-bg: rgba(121, 184, 115, 0.16);
 			--font-prose: 'Lora', Georgia, serif;
 			--font-ui:    'DM Mono', 'Courier New', monospace;
 
@@ -429,26 +435,31 @@
 			margin-bottom: 6px;
 		}
 
-		.sg-card-diff {
+		/* inline diff — unchanged context plain, deletions struck out,
+		   insertions highlighted; pre-wrap keeps whitespace-only edits
+		   (e.g. "-" → " ") visible */
+		.sg-diff {
 			font-size: 11px;
-			line-height: 1.5;
-		}
-
-		.sg-original {
-			color: var(--sg-grammar);
-			text-decoration: line-through;
-			opacity: 0.7;
+			line-height: 1.7;
+			color: var(--text-mid);
+			white-space: pre-wrap;
 			word-break: break-word;
-		}
 
-		.sg-arrow {
-			color: var(--text-dim);
-			margin: 0 4px;
-		}
+			.diff-del {
+				color: var(--diff-del);
+				background: var(--diff-del-bg);
+				text-decoration: line-through;
+				text-decoration-thickness: 1px;
+				border-radius: 2px;
+				padding: 1px 2px;
+			}
 
-		.sg-replacement {
-			color: var(--text);
-			word-break: break-word;
+			.diff-ins {
+				color: var(--diff-ins);
+				background: var(--diff-ins-bg);
+				border-radius: 2px;
+				padding: 1px 2px;
+			}
 		}
 
 		/* ── tooltip ───────────────────────────────────────── */
@@ -470,7 +481,6 @@
 
 		#tooltip-badge { align-self: flex-start; }
 		#tooltip-explanation { font-size: 11px; color: var(--text-mid); line-height: 1.5; }
-		#tooltip-diff { font-size: 11px; line-height: 1.5; }
 
 		#tooltip-actions {
 			display: flex;
@@ -659,11 +669,7 @@
 <div id="tooltip">
 	<span id="tooltip-badge" class="sg-badge"></span>
 	<p id="tooltip-explanation"></p>
-	<p id="tooltip-diff">
-		<span id="tooltip-original" class="sg-original"></span>
-		<span class="sg-arrow">→</span>
-		<span id="tooltip-replacement" class="sg-replacement"></span>
-	</p>
+	<p id="tooltip-diff" class="sg-diff"></p>
 	<div id="tooltip-actions">
 		<button class="sg-btn accept" id="tooltip-accept">accept</button>
 		<button class="sg-btn reject" id="tooltip-reject">reject</button>

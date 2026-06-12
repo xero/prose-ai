@@ -156,6 +156,41 @@ export const validateOutput = (raw, sourceText) => {
 	return valid;
 };
 
+const collapse = (s) => s.replace(/\s+/g, ' ').trim();
+
+// does the replacement purely ADD text at the start or end of the span,
+// where that added text already appears immediately next to the span in
+// the source? (the model meant to rewrite a longer span but under-quoted)
+const insertionDuplicatesNeighbor = (original, replacement, sourceText) => {
+	// shared prefix/suffix between original and replacement
+	let p = 0;
+	while (p < original.length && p < replacement.length && original[p] === replacement[p]) p++;
+	let s = 0;
+	while (
+		s < original.length - p && s < replacement.length - p &&
+		original[original.length - 1 - s] === replacement[replacement.length - 1 - s]
+	) s++;
+
+	const removed = original.slice(p, original.length - s);
+	const added   = replacement.slice(p, replacement.length - s);
+	if (collapse(removed) !== '' || collapse(added) === '') return false;  // not a pure insertion
+
+	const idx = sourceText.indexOf(original);
+	const probe = collapse(added);
+
+	// inserted at the end of the span → compare with what follows
+	if (s === 0) {
+		const after = collapse(sourceText.slice(idx + original.length, idx + original.length + added.length + 24));
+		if (after.includes(probe)) return true;
+	}
+	// inserted at the start of the span → compare with what precedes
+	if (p === 0) {
+		const before = collapse(sourceText.slice(Math.max(0, idx - added.length - 24), idx));
+		if (before.includes(probe)) return true;
+	}
+	return false;
+};
+
 // validateItem(item, sourceText) → {original, replacement, type, explanation} | null
 // the per-suggestion checks, shared by validateOutput and the stream path
 export const validateItem = (item, sourceText) => {
@@ -177,6 +212,15 @@ export const validateItem = (item, sourceText) => {
 	// original must be a verbatim substring of the source text
 	if (!sourceText.includes(item.original)) {
 		console.warn('[prose-ai] dropping unlocatable suggestion:', item.original);
+		return null;
+	}
+
+	// drop edge insertions that duplicate the text already adjacent to the
+	// span — e.g. original "…holds the whole file", replacement "…holds the
+	// whole file in memory" when the document continues "encoded in memory".
+	// accepting such a suggestion doubles the phrase.
+	if (insertionDuplicatesNeighbor(item.original, item.replacement, sourceText)) {
+		console.warn('[prose-ai] dropping suggestion duplicating adjacent text:', item.original);
 		return null;
 	}
 

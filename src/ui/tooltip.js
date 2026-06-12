@@ -2,12 +2,13 @@
 // ║   prose-ai — tooltip          ║
 // ╚═══════════════════════════════╝
 
+import { renderDiff } from '../diff/render.js';
+
 const el = {
 	wrap: document.querySelector('#tooltip'),
 	badge: document.querySelector('#tooltip-badge'),
 	explanation: document.querySelector('#tooltip-explanation'),
-	original: document.querySelector('#tooltip-original'),
-	replacement: document.querySelector('#tooltip-replacement'),
+	diff: document.querySelector('#tooltip-diff'),
 	accept: document.querySelector('#tooltip-accept'),
 	reject: document.querySelector('#tooltip-reject'),
 };
@@ -38,8 +39,7 @@ const show = (id, type, explanation, original, replacement, targetRect) => {
 	el.badge.textContent  = type;
 	el.badge.className    = `sg-badge sg-badge--${type}`;
 	el.explanation.textContent = explanation;
-	el.original.textContent    = original;
-	el.replacement.textContent = replacement;
+	el.diff.replaceChildren(renderDiff(original, replacement));
 
 	el.wrap.classList.add('visible');
 
@@ -80,22 +80,25 @@ export const showForId = (id, editor) => {
 	span?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 };
 
+// a mark spanning a formatting boundary lives in several text nodes —
+// accumulate the original across all of them
 const findMarkById = (editor, id) => {
-	let found = null;
+	let attrs = null;
+	let original = '';
 	editor.state.doc.descendants((node) => {
-		if (found) return false;
 		if (!node.isText) return;
 		const m = node.marks.find(
 			m => m.type.name === 'suggestion' && m.attrs.id === id
 		);
-		if (m) found = {
-			type: m.attrs.type,
-			replacement: m.attrs.replacement,
-			explanation: m.attrs.explanation,
-			original: node.text,
-		};
+		if (m) { attrs ??= m.attrs; original += node.text; }
 	});
-	return found;
+	if (!attrs) return null;
+	return {
+		type: attrs.type,
+		replacement: attrs.replacement,
+		explanation: attrs.explanation,
+		original,
+	};
 };
 
 export const initTooltip = (editor) => {

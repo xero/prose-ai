@@ -2,7 +2,8 @@
 // ║   prose-ai — sidebar          ║
 // ╚═══════════════════════════════╝
 
-import { showForId } from './tooltip.js';
+import { showForId }  from './tooltip.js';
+import { renderDiff } from '../diff/render.js';
 
 const el = {
 	list: document.querySelector('#sidebar-list'),
@@ -30,13 +31,13 @@ const renderCard = (s, editor) => {
 				<button class="sg-btn reject" data-action="reject">reject</button>
 			</div>
 		</div>
-		<p class="sg-card-explanation">${s.explanation}</p>
-		<p class="sg-card-diff">
-			<span class="sg-original">${s.original}</span>
-			<span class="sg-arrow">→</span>
-			<span class="sg-replacement">${s.replacement}</span>
-		</p>
+		<p class="sg-card-explanation"></p>
+		<p class="sg-diff"></p>
 	`;
+
+	// model-controlled text goes in via textContent, never innerHTML
+	card.querySelector('.sg-card-explanation').textContent = s.explanation;
+	card.querySelector('.sg-diff').appendChild(renderDiff(s.original, s.replacement));
 
 	// click card body → scroll + open tooltip
 	card.addEventListener('click', (e) => {
