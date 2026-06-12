@@ -12,10 +12,12 @@ import { diffParts }                 from '../diff/render.js';
 // redraws the node (its mutation observer treats them as foreign DOM).
 export const suggestionFocusKey = new PluginKey('suggestion-focus');
 
-// setSuggestionFocus(editor, id) — id null clears the highlight
-export const setSuggestionFocus = (editor, id) => {
+// setSuggestionFocus(editor, id, pulse) — id null clears the highlight.
+// pulse draws the eye when focus arrives from OUTSIDE the editor (the
+// sidebar); a mark the user just clicked needs no locating flash.
+export const setSuggestionFocus = (editor, id, pulse = false) => {
 	const { state, view } = editor;
-	view.dispatch(state.tr.setMeta(suggestionFocusKey, { id }));
+	view.dispatch(state.tr.setMeta(suggestionFocusKey, { id, pulse }));
 };
 
 // walk the doc and return the full {from, to} of the mark with matching id.
@@ -145,22 +147,19 @@ export const SuggestionMark = Mark.create({
 			new Plugin({
 				key: suggestionFocusKey,
 				state: {
-					init: () => null,
-					apply: (tr, prev) => {
-						const meta = tr.getMeta(suggestionFocusKey);
-						return meta === undefined ? prev : meta.id;
-					},
+					init: () => ({ id: null, pulse: false }),
+					apply: (tr, prev) => tr.getMeta(suggestionFocusKey) ?? prev,
 				},
 				props: {
 					decorations(state) {
-						const id = suggestionFocusKey.getState(state);
+						const { id, pulse } = suggestionFocusKey.getState(state);
 						if (!id) return null;
 						const decos = [];
 						state.doc.descendants((node, pos) => {
 							if (!node.isText) return;
 							if (node.marks.some(m => m.type === markType && m.attrs.id === id)) {
 								decos.push(Decoration.inline(pos, pos + node.nodeSize, {
-									class: 'sg-locate',
+									class: 'sg-locate' + (pulse ? ' sg-locate-pulse' : ''),
 								}));
 							}
 						});

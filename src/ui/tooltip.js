@@ -40,8 +40,8 @@ const show = (id, type, explanation, original, replacement, targetRect) => {
 	activeId = id;
 
 	// the full popup is mobile-only: on desktop the inline diff and the
-	// sidebar card already show everything it would repeat (double-click
-	// opens the mini variant instead — see showMini)
+	// sidebar card already show everything it would repeat (the mini
+	// variant opens alongside instead — see showMini)
 	if (mobile.matches) {
 		el.badge.textContent  = type;
 		el.badge.className    = `sg-badge sg-badge--${type}`;
@@ -79,7 +79,7 @@ export const hide = () => {
 	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
 };
 
-// mini popup (desktop double-click): one row — badge, accept, reject.
+// mini popup (desktop click on a mark): one row — badge, accept, reject.
 // the inline diff already shows the change, so only the actions travel
 // to the pointer
 const showMini = (id, type, targetRect) => {
@@ -105,8 +105,10 @@ export const showForId = (id, editor) => {
 
 	show(id, mark.type, mark.explanation, mark.original, mark.replacement, rect);
 
-	// scroll editor to mark — show() already set the pulsing focus
+	// scroll editor to mark and pulse it — focus arriving from the
+	// sidebar needs locating; a mark the user clicked does not
 	span?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	setSuggestionFocus(editor, id, true);
 };
 
 // a mark spanning a formatting boundary lives in several text nodes —
@@ -134,7 +136,9 @@ const findMarkById = (editor, id) => {
 };
 
 export const initTooltip = (editor) => {
-	// click on a suggestion mark in the editor
+	// click on a suggestion mark in the editor: mobile gets the full
+	// tooltip, desktop locates the sidebar card AND opens the mini
+	// accept/reject popup at the pointer
 	document.querySelector('#editor').addEventListener('click', (e) => {
 		const span = /** @type {?HTMLElement} */ (
 			/** @type {HTMLElement} */ (e.target).closest('.suggestion'));
@@ -148,27 +152,18 @@ export const initTooltip = (editor) => {
 
 		show(id, mark.type, mark.explanation, mark.original, mark.replacement,
 			span.getBoundingClientRect());
+		if (!mobile.matches) showMini(id, mark.type, span.getBoundingClientRect());
 	});
 
-	// double-click on a suggestion (desktop): accept/reject at the pointer
+	// double-click would word-select, and a selection summons the synonyms
+	// bubble over the open mini popup. PM applies the selection after this
+	// handler runs, so the collapse happens a tick later
 	document.querySelector('#editor').addEventListener('dblclick', (e) => {
 		if (mobile.matches) return;
-		const span = /** @type {?HTMLElement} */ (
-			/** @type {HTMLElement} */ (e.target).closest('.suggestion'));
-		if (!span) return;
-
-		const id   = span.dataset.suggestionId;
-		const mark = findMarkById(editor, id);
-		if (!mark) return;
-
-		// double-click word-selects, and a selection summons the synonyms
-		// bubble. PM applies that selection after this handler runs, so the
-		// collapse has to happen a tick later or it collapses nothing
+		if (!/** @type {HTMLElement} */ (e.target).closest('.suggestion')) return;
 		setTimeout(() => {
 			editor.commands.setTextSelection(editor.state.selection.from);
 		}, 0);
-
-		showMini(id, mark.type, span.getBoundingClientRect());
 	});
 
 	// accept

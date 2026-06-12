@@ -15,7 +15,7 @@
 
 **Streaming suggestions.** prose-ai splits the document into paragraph chunks and analyzes them concurrently. Each suggestion lands in the editor the moment the model finishes writing it; the first change appears in seconds while the rest of the document is still processing. Triage from the start, no waiting for the full run.
 
-**Triage anywhere.** On desktop, a single click on a change locates its card in the sidebar (pinned to the top of the list and expanded, with accept and reject), and a double-click opens a mini accept/reject popup right at the pointer. On mobile, a tap opens a tooltip with the full details and actions. The sidebar always lists suggestions in document order.
+**Triage anywhere.** On desktop, a single click on a change opens a mini accept/reject popup right at the pointer and locates its card in the sidebar (pinned to the top of the list and expanded). On mobile, a tap opens a tooltip with the full details and actions. The sidebar always lists suggestions in document order.
 
 **Undo button.** A pointer twin of ctrl+z in the toolbar, accepted suggestions included. It lights up amber whenever there is something to take back.
 

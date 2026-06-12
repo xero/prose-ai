@@ -571,17 +571,17 @@
 		cursor: pointer;
 	}
 
-	/* locate pulse — rendered as a PM decoration (.sg-locate spans), so it
-	   survives editor redraws; fires whenever focus lands on a mark. the *
-	   covers diff-ins/diff-del child spans inside the mark so they flash
-	   in step with it */
+	/* focus highlight + locate pulse — rendered as PM decorations
+	   (.sg-locate spans), so they survive editor redraws. the pulse fires
+	   only when focus arrives from the sidebar; the * covers diff-ins and
+	   diff-del child spans inside the mark so they flash in step */
 	@keyframes locate-pulse {
 		50% {
 			background-color: #4285f4;
 		}
 	}
-	.sg-locate,
-	.sg-locate * {
+	.sg-locate-pulse,
+	.sg-locate-pulse * {
 		animation-name: locate-pulse;
 		animation-duration: 2s;
 		animation-iteration-count: 2;
@@ -814,7 +814,7 @@
 		border-top: 1px solid var(--border);
 	}
 
-	/* mini mode (desktop double-click): one row — badge, accept, reject */
+	/* mini mode (desktop click on a mark): one row — badge, accept, reject */
 	#tooltip.mini {
 		flex-direction: row;
 		align-items: center;
