@@ -10,19 +10,24 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@tiptap/core": "^3.20.2",
-    "@tiptap/extension-bubble-menu": "^3.20.2",
-    "@tiptap/extension-placeholder": "^3.20.2",
-    "@tiptap/starter-kit": "^3.20.2",
+    "@tiptap/core": "^3.26.1",
+    "@tiptap/extension-bubble-menu": "^3.26.1",
+    "@tiptap/extension-placeholder": "^3.26.1",
+    "@tiptap/starter-kit": "^3.26.1",
     "diff-match-patch": "^1.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "assemblyscript": "^0.27.37",
-    "jiti": "^2.6.1",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.0",
-    "eslint": "^10.0.3",
-    "vite": "^6.2.2"
+    "@tailwindcss/postcss": "^4.3.0",
+    "assemblyscript": "^0.28.19",
+    "cssnano": "^8.0.2",
+    "cssnano-preset-advanced": "^8.0.2",
+    "eslint": "^10.4.1",
+    "jiti": "^2.7.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0",
+    "vite": "^8.0.16"
   }
 }
