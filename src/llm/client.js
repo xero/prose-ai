@@ -18,6 +18,35 @@ const pool = new RequestPool({ limit: MAX_CONCURRENT });
 // so a stale run can detect it was superseded and throw AbortError.
 let token = 0;
 
+// how long analyze() will wait for a crashed backend to be resurrected
+// by start.sh's supervisor before giving up
+const BACKEND_WAIT_MS = 90_000;
+
+const backendUp = async () => {
+	try {
+		const res = await fetch(`${BACKEND_URL}/models`, {
+			signal: AbortSignal.timeout(2000),
+		});
+		return res.ok;
+	} catch {
+		return false;
+	}
+};
+
+// resolves when the backend answers; throws if it stays down past the
+// window or this run is superseded
+const waitForBackend = async (myToken) => {
+	const deadline = Date.now() + BACKEND_WAIT_MS;
+	while (Date.now() < deadline) {
+		if (token !== myToken) throw new DOMException('Aborted', 'AbortError');
+		if (await backendUp()) return;
+		await new Promise(r => setTimeout(r, 2000));
+	}
+	throw new Error(
+		'LLM backend did not come back — check the rapid-mlx supervisor (/tmp/rapid-mlx.log)'
+	);
+};
+
 // one streamed chunk: POST with stream:true, emit each validated
 // suggestion the moment its closing brace arrives. returns the count.
 const streamChunk = async (chunk, mode, types, signal, onSuggestion) => {
@@ -80,6 +109,14 @@ export async function* analyze(doc, mode, types) {
 
 	const total = chunks.length;
 	yield { type: 'init', total };
+
+	// pre-flight: if the backend just crashed, the supervisor is already
+	// relaunching it — wait instead of failing every chunk instantly
+	if (!(await backendUp())) {
+		yield { type: 'notice', text: 'backend starting…' };
+		await waitForBackend(myToken);
+		yield { type: 'notice', text: null };
+	}
 
 	// all events (per-suggestion and per-chunk) flow through one queue so
 	// a single generator can interleave them in arrival order

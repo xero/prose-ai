@@ -2,15 +2,29 @@
 # prose-ai start script — starts Rapid-MLX (or any OpenAI-compatible backend)
 # and launches the dev server. To use a different backend, update BACKEND_URL
 # in src/llm/config.js — no other changes needed.
+#
+# The backend runs under a supervisor loop: if Python dies (Metal OOM under
+# memory pressure aborts the whole process), it relaunches automatically and
+# the next analyze picks it up.
 set -e
 
 MODEL=$(cat "$(dirname "$0")/.model")
 BASE="http://localhost:8000/v1"
+LOG="/tmp/rapid-mlx.log"
 
 if ! curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; then
-  echo "starting rapid-mlx..."
-  rapid-mlx serve "$MODEL" --port 8000 --gpu-memory-utilization 0.75 \
-    &> /tmp/rapid-mlx.log &
+  echo "starting rapid-mlx (supervised)..."
+  (
+    while true; do
+      rapid-mlx serve "$MODEL" --port 8000 \
+        --gpu-memory-utilization 0.75 \
+        --kv-cache-quantization \
+        >> "$LOG" 2>&1
+      code=$?
+      echo "$(date '+%F %T') rapid-mlx exited (code $code) — restarting in 3s" | tee -a "$LOG"
+      sleep 3
+    done
+  ) &
   echo "waiting for server (first run downloads the model)..."
   until curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; do sleep 1; done
 fi

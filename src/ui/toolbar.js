@@ -126,6 +126,10 @@ export const initToolbar = (editor) => {
 					setStatus(`analyzing 0/${total}…`, 'loading');
 					continue;
 				}
+				if (event.type === 'notice') {
+					setStatus(event.text ?? `analyzing ${completed}/${total}…`, 'loading');
+					continue;
+				}
 				if (event.type === 'suggestion') {
 					// each suggestion lands in the editor the moment it streams in
 					const mapped = mapSuggestions(editor, [event.suggestion], event.chunkFrom);

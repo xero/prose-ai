@@ -30,6 +30,7 @@ if ! curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; then
   echo "    (first-ever run downloads the model — this can take a while)"
   rapid-mlx serve "$MODEL" --port 8000 \
     --gpu-memory-utilization 0.75 \
+    --kv-cache-quantization \
     --prefill-step-size 8192 \
     &> /tmp/rapid-mlx.log &
   until curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; do sleep 1; done

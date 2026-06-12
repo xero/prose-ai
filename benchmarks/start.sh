@@ -6,7 +6,7 @@ BASE="http://localhost:8000/v1"
 
 if ! curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; then
   echo "starting rapid-mlx ($MODEL)..."
-  rapid-mlx serve "$MODEL" --port 8000 --gpu-memory-utilization 0.75 \
+  rapid-mlx serve "$MODEL" --port 8000 --gpu-memory-utilization 0.75 --kv-cache-quantization \
     &> /tmp/rapid-mlx.log &
   until curl -fs --max-time 2 "$BASE/models" > /dev/null 2>&1; do sleep 1; done
 fi
