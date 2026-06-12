@@ -2,7 +2,9 @@
 // ║   prose-ai — tooltip          ║
 // ╚═══════════════════════════════╝
 
-import { renderDiff } from '../diff/render.js';
+import { renderDiff }         from '../diff/render.js';
+import { setSuggestionFocus } from '../extensions/suggestion.js';
+import { editor as theEditor } from '../editor.js';
 
 const el = {
 	wrap: document.querySelector('#tooltip'),
@@ -46,10 +48,9 @@ const show = (id, type, explanation, original, replacement, targetRect) => {
 	// reposition after paint so offsetWidth is accurate
 	requestAnimationFrame(() => reposition(targetRect));
 
-	// highlight the corresponding mark span
-	document.querySelectorAll('.suggestion').forEach(s => s.classList.remove('active'));
-	document.querySelectorAll(`[data-suggestion-id="${id}"]`)
-		.forEach(s => s.classList.add('active'));
+	// highlight the corresponding mark via decoration (PM redraws wipe
+	// hand-written classes inside the editor)
+	setSuggestionFocus(theEditor, id);
 
 	// highlight sidebar card
 	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
@@ -59,7 +60,7 @@ const show = (id, type, explanation, original, replacement, targetRect) => {
 export const hide = () => {
 	activeId = null;
 	el.wrap.classList.remove('visible');
-	document.querySelectorAll('.suggestion').forEach(s => s.classList.remove('active'));
+	setSuggestionFocus(theEditor, null);
 	document.querySelectorAll('.sg-card').forEach(c => c.classList.remove('active'));
 };
 
@@ -78,6 +79,13 @@ export const showForId = (id, editor) => {
 
 	// scroll editor to mark
 	span?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+	// pulse the mark so it stands out among neighbours; drop back to the
+	// steady highlight once the animation has run (3 × 450ms)
+	setSuggestionFocus(editor, id, true);
+	setTimeout(() => {
+		if (activeId === id) setSuggestionFocus(editor, id, false);
+	}, 1450);
 };
 
 // a mark spanning a formatting boundary lives in several text nodes —

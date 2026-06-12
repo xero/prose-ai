@@ -309,7 +309,18 @@
 		.suggestion--tone     { background: var(--sg-tone-bg);      border-bottom: 1.5px solid var(--sg-tone);     }
 
 		.suggestion:hover { filter: brightness(1.3); }
-		.suggestion.active { outline: 1px solid currentColor; outline-offset: 1px; }
+
+		/* focus highlight + locate pulse — rendered as PM decorations
+		   (.sg-locate spans), so they survive editor redraws */
+		.sg-locate { outline: 1px solid currentColor; outline-offset: 1px; }
+
+		@keyframes sg-pulse {
+			0%   { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+			100% { box-shadow: 0 0 0 9px transparent; }
+		}
+		.sg-locate-pulse {
+			animation: sg-pulse 0.45s ease-out 3;
+		}
 
 		/* ── sidebar ───────────────────────────────────────── */
 		#sidebar {

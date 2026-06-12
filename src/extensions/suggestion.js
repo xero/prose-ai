@@ -2,7 +2,20 @@
 // ║   prose-ai — suggestion mark  ║
 // ╚═══════════════════════════════╝
 
-import { Mark, mergeAttributes } from '@tiptap/core';
+import { Mark, mergeAttributes }     from '@tiptap/core';
+import { Plugin, PluginKey }         from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+
+// transient focus/pulse highlighting must be a ProseMirror decoration —
+// hand-written classes inside the contenteditable get wiped whenever PM
+// redraws the node (its mutation observer treats them as foreign DOM).
+export const suggestionFocusKey = new PluginKey('suggestion-focus');
+
+// setSuggestionFocus(editor, id, pulse) — id null clears the highlight
+export const setSuggestionFocus = (editor, id, pulse = false) => {
+	const { state, view } = editor;
+	view.dispatch(state.tr.setMeta(suggestionFocusKey, { id, pulse }));
+};
 
 // walk the doc and return the full {from, to} of the mark with matching id.
 // a single suggestion span is stored as SEVERAL text nodes whenever it
@@ -49,6 +62,35 @@ export const SuggestionMark = Mark.create({
 				'data-type': mark.attrs.type,
 			}),
 			0,  // hole — render children inside
+		];
+	},
+
+	addProseMirrorPlugins() {
+		const markType = this.type;
+		return [
+			new Plugin({
+				key: suggestionFocusKey,
+				state: {
+					init: () => ({ id: null, pulse: false }),
+					apply: (tr, prev) => tr.getMeta(suggestionFocusKey) ?? prev,
+				},
+				props: {
+					decorations(state) {
+						const { id, pulse } = suggestionFocusKey.getState(state);
+						if (!id) return null;
+						const decos = [];
+						state.doc.descendants((node, pos) => {
+							if (!node.isText) return;
+							if (node.marks.some(m => m.type === markType && m.attrs.id === id)) {
+								decos.push(Decoration.inline(pos, pos + node.nodeSize, {
+									class: 'sg-locate' + (pulse ? ' sg-locate-pulse' : ''),
+								}));
+							}
+						});
+						return DecorationSet.create(state.doc, decos);
+					},
+				},
+			}),
 		];
 	},
 
