@@ -80,12 +80,9 @@ export const showForId = (id, editor) => {
 	// scroll editor to mark
 	span?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
-	// pulse the mark so it stands out among neighbours; drop back to the
-	// steady highlight once the animation has run (3 × 450ms)
+	// pulse the mark so it stands out among neighbours; the ghost echo
+	// loops until the tooltip closes or focus moves on
 	setSuggestionFocus(editor, id, true);
-	setTimeout(() => {
-		if (activeId === id) setSuggestionFocus(editor, id, false);
-	}, 1450);
 };
 
 // a mark spanning a formatting boundary lives in several text nodes —

@@ -314,13 +314,33 @@
 		   (.sg-locate spans), so they survive editor redraws */
 		.sg-locate { outline: 1px solid currentColor; outline-offset: 1px; }
 
+		/* expanding ghost echo of the mark, in its type colour */
 		@keyframes sg-pulse {
-			0%   { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
-			100% { box-shadow: 0 0 0 9px transparent; }
+			0%   { transform: scale(1); opacity: 0.5; }
+			50%  { opacity: 0.2; }
+			100% { transform: scale(1.12, 1.9); opacity: 0; }
 		}
 		.sg-locate-pulse {
-			animation: sg-pulse 0.45s ease-out 3;
+			/* own stacking context, so the z-index:-1 ghost paints behind
+			   this span's text but above the editor pane's background */
+			position: relative;
+			z-index: 0;
+
+			&::before {
+				content: "";
+				position: absolute;
+				inset: -2px -4px;
+				border-radius: 4px;
+				background: var(--text-mid);
+				animation: sg-pulse 2s ease infinite;
+				pointer-events: none;
+				z-index: -1;
+			}
 		}
+		.suggestion--grammar    .sg-locate-pulse::before { background: var(--sg-grammar); }
+		.suggestion--vocabulary .sg-locate-pulse::before { background: var(--sg-vocab);   }
+		.suggestion--clarity    .sg-locate-pulse::before { background: var(--sg-clarity); }
+		.suggestion--tone       .sg-locate-pulse::before { background: var(--sg-tone);    }
 
 		/* ── sidebar ───────────────────────────────────────── */
 		#sidebar {
