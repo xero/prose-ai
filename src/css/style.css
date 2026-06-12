@@ -571,26 +571,20 @@
 		cursor: pointer;
 	}
 
-	/* focus highlight + locate pulse — rendered as PM decorations
-	   (.sg-locate spans), so they survive editor redraws */
-	.sg-locate {  }
-
-	@keyframes color {
-		0% {
-			background-color: var(--text-mid);
-		}
+	/* locate pulse — rendered as a PM decoration (.sg-locate spans), so it
+	   survives editor redraws; fires whenever focus lands on a mark. the *
+	   covers diff-ins/diff-del child spans inside the mark so they flash
+	   in step with it */
+	@keyframes locate-pulse {
 		50% {
 			background-color: #4285f4;
 		}
-		100% {
-			background-color: var(--text-mid);
-		}
 	}
-	.sg-locate-pulse {
-		background-color: var(--bg-hover);
-		animation-name: color;
+	.sg-locate,
+	.sg-locate * {
+		animation-name: locate-pulse;
 		animation-duration: 2s;
-		animation-iteration-count: 3;
+		animation-iteration-count: 2;
 	}
 
 	/* ── sidebar ───────────────────────────────────────── */

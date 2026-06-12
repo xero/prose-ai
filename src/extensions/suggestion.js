@@ -7,15 +7,15 @@ import { Plugin, PluginKey }         from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { diffParts }                 from '../diff/render.js';
 
-// transient focus/pulse highlighting must be a ProseMirror decoration —
+// transient focus highlighting must be a ProseMirror decoration —
 // hand-written classes inside the contenteditable get wiped whenever PM
 // redraws the node (its mutation observer treats them as foreign DOM).
 export const suggestionFocusKey = new PluginKey('suggestion-focus');
 
-// setSuggestionFocus(editor, id, pulse) — id null clears the highlight
-export const setSuggestionFocus = (editor, id, pulse = false) => {
+// setSuggestionFocus(editor, id) — id null clears the highlight
+export const setSuggestionFocus = (editor, id) => {
 	const { state, view } = editor;
-	view.dispatch(state.tr.setMeta(suggestionFocusKey, { id, pulse }));
+	view.dispatch(state.tr.setMeta(suggestionFocusKey, { id }));
 };
 
 // walk the doc and return the full {from, to} of the mark with matching id.
@@ -145,19 +145,22 @@ export const SuggestionMark = Mark.create({
 			new Plugin({
 				key: suggestionFocusKey,
 				state: {
-					init: () => ({ id: null, pulse: false }),
-					apply: (tr, prev) => tr.getMeta(suggestionFocusKey) ?? prev,
+					init: () => null,
+					apply: (tr, prev) => {
+						const meta = tr.getMeta(suggestionFocusKey);
+						return meta === undefined ? prev : meta.id;
+					},
 				},
 				props: {
 					decorations(state) {
-						const { id, pulse } = suggestionFocusKey.getState(state);
+						const id = suggestionFocusKey.getState(state);
 						if (!id) return null;
 						const decos = [];
 						state.doc.descendants((node, pos) => {
 							if (!node.isText) return;
 							if (node.marks.some(m => m.type === markType && m.attrs.id === id)) {
 								decos.push(Decoration.inline(pos, pos + node.nodeSize, {
-									class: 'sg-locate' + (pulse ? ' sg-locate-pulse' : ''),
+									class: 'sg-locate',
 								}));
 							}
 						});

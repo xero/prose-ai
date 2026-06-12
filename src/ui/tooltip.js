@@ -105,12 +105,8 @@ export const showForId = (id, editor) => {
 
 	show(id, mark.type, mark.explanation, mark.original, mark.replacement, rect);
 
-	// scroll editor to mark
+	// scroll editor to mark — show() already set the pulsing focus
 	span?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-
-	// pulse the mark so it stands out among neighbours; the ghost echo
-	// loops until the tooltip closes or focus moves on
-	setSuggestionFocus(editor, id, true);
 };
 
 // a mark spanning a formatting boundary lives in several text nodes —
